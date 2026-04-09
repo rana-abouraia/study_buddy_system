@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.log
+logs/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+prisma/migrations/
