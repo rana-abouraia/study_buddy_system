@@ -116,6 +116,13 @@ NeonDB (PostgreSQL per service)
 
 ---
 
+## Documentation
+
+- Architecture Overview: docs/architecture.md  
+- GraphQL Examples: docs/graphql-examples.md  
+
+---
+
 ## Event-Driven Communication
 
 The system uses Kafka to enable asynchronous communication between services.
