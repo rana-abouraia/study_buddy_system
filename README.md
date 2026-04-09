@@ -10,6 +10,7 @@ A scalable, event-driven microservices platform that intelligently connects stud
 * Rana Abouraia
 * Mohamed Serag
 * Mahmoud Hesham
+* Mohammed Walid
 
 ---
 
