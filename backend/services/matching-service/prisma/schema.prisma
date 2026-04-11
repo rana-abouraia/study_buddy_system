@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Match {
+  id                 String      @id @default(uuid())
+  userId1            String
+  userId2            String
+  compatibilityScore Int
+  sharedCourses      String[]
+  sharedTopics       String[]
+  overlappingTime    Int
+  status             String      @default("PENDING")
+  createdAt          DateTime    @default(now())
+
+  @@unique([userId1, userId2])
+}
+
+model BuddyRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

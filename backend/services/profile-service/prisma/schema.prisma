@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  studyPace   String
+  studyMode   String
+  groupSize   String
+  studyStyles String[]
+  courses     Course[]
+  topics      Topic[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Course {
+  id        String      @id @default(uuid())
+  name      String
+  code      String
+  profileId String
+  profile   UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Topic {
+  id        String      @id @default(uuid())
+  name      String
+  profileId String
+  profile   UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AvailabilitySlot {
+  id          String   @id @default(uuid())
+  userId      String
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isRecurring Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, dayOfWeek, startTime])
+}
