@@ -1,9 +1,31 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolvers = void 0;
+const client_1 = require("@prisma/client");
 const index_1 = require("../index");
 const producer_1 = require("../kafka/producer");
-const VALID_SESSION_TYPES = ['ONLINE', 'IN_PERSON'];
+const VALID_SESSION_TYPES = Object.values(client_1.SessionType);
+const normalizeOptionalString = (value) => {
+    if (typeof value !== 'string')
+        return undefined;
+    const trimmedValue = value.trim();
+    return trimmedValue ? trimmedValue : undefined;
+};
+const handlePrismaError = (error, defaultMessage, uniqueConstraintMessage) => {
+    if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+            throw new Error(uniqueConstraintMessage || 'A unique constraint was violated');
+        }
+        if (error.code === 'P2025') {
+            throw new Error('Requested record was not found');
+        }
+        throw new Error(defaultMessage);
+    }
+    if (error instanceof client_1.Prisma.PrismaClientValidationError) {
+        throw new Error(defaultMessage);
+    }
+    throw error;
+};
 exports.resolvers = {
     Query: {
         getStudySessions: async () => {
@@ -43,39 +65,64 @@ exports.resolvers = {
                 throw new Error('Not authenticated');
             if (userId !== args.creatorId)
                 throw new Error('Not authorized');
+            const topic = normalizeOptionalString(args.topic);
+            if (!topic)
+                throw new Error('Topic must not be empty');
+            if (args.duration <= 0)
+                throw new Error('Duration must be greater than 0');
             const sessionDate = new Date(args.date);
             if (Number.isNaN(sessionDate.getTime()))
                 throw new Error('Invalid session date');
-            if (!VALID_SESSION_TYPES.includes(args.sessionType)) {
+            if (sessionDate <= new Date())
+                throw new Error('Session date must be in the future');
+            const normalizedSessionType = normalizeOptionalString(args.sessionType)?.toUpperCase();
+            if (!normalizedSessionType || !VALID_SESSION_TYPES.includes(normalizedSessionType)) {
                 throw new Error('sessionType must be ONLINE or IN_PERSON');
             }
-            const session = await index_1.prisma.studySession.create({
-                data: {
-                    creatorId: args.creatorId,
-                    topic: args.topic,
-                    description: args.description,
-                    date: sessionDate,
-                    duration: args.duration,
-                    sessionType: args.sessionType,
-                    location: args.location,
-                    meetingLink: args.meetingLink,
-                    participants: {
-                        create: {
-                            userId: args.creatorId,
-                            status: 'JOINED',
-                            joinedAt: new Date()
+            const sessionType = normalizedSessionType;
+            const description = normalizeOptionalString(args.description);
+            const location = normalizeOptionalString(args.location);
+            const meetingLink = normalizeOptionalString(args.meetingLink);
+            const contactInfo = normalizeOptionalString(args.contactInfo);
+            if (sessionType === 'ONLINE' && !meetingLink) {
+                throw new Error('meetingLink is required for ONLINE sessions');
+            }
+            if (sessionType === 'IN_PERSON' && !location) {
+                throw new Error('location is required for IN_PERSON sessions');
+            }
+            try {
+                const session = await index_1.prisma.studySession.create({
+                    data: {
+                        creatorId: args.creatorId,
+                        topic,
+                        description,
+                        date: sessionDate,
+                        duration: args.duration,
+                        sessionType,
+                        location,
+                        meetingLink,
+                        contactInfo,
+                        participants: {
+                            create: {
+                                userId: args.creatorId,
+                                status: 'JOINED',
+                                joinedAt: new Date()
+                            }
                         }
-                    }
-                },
-                include: { participants: true }
-            });
-            await (0, producer_1.publishEvent)('study-session-created', {
-                sessionId: session.id,
-                creatorId: session.creatorId,
-                topic: session.topic,
-                status: session.status
-            });
-            return session;
+                    },
+                    include: { participants: true }
+                });
+                await (0, producer_1.publishEvent)('study-session-created', {
+                    sessionId: session.id,
+                    creatorId: session.creatorId,
+                    topic: session.topic,
+                    status: session.status
+                });
+                return session;
+            }
+            catch (error) {
+                handlePrismaError(error, 'Failed to create study session');
+            }
         },
         joinStudySession: async (_, { sessionId, userId }, context) => {
             if (!context.userId)
@@ -98,14 +145,19 @@ exports.resolvers = {
             });
             if (existingParticipant)
                 throw new Error('User has already joined this session');
-            await index_1.prisma.sessionParticipant.create({
-                data: {
-                    sessionId,
-                    userId,
-                    status: 'JOINED',
-                    joinedAt: new Date()
-                }
-            });
+            try {
+                await index_1.prisma.sessionParticipant.create({
+                    data: {
+                        sessionId,
+                        userId,
+                        status: 'JOINED',
+                        joinedAt: new Date()
+                    }
+                });
+            }
+            catch (error) {
+                handlePrismaError(error, 'Failed to join study session', 'User has already joined this session');
+            }
             const updatedSession = await index_1.prisma.studySession.findUnique({
                 where: { id: sessionId },
                 include: { participants: true }
@@ -127,6 +179,9 @@ exports.resolvers = {
             });
             if (!session)
                 throw new Error('Study session not found');
+            if (session.creatorId === userId) {
+                throw new Error('The creator cannot leave their own session. Cancel it instead.');
+            }
             const participant = await index_1.prisma.sessionParticipant.findFirst({
                 where: {
                     sessionId,
@@ -135,9 +190,14 @@ exports.resolvers = {
             });
             if (!participant)
                 throw new Error('User is not a participant in this session');
-            await index_1.prisma.sessionParticipant.delete({
-                where: { id: participant.id }
-            });
+            try {
+                await index_1.prisma.sessionParticipant.delete({
+                    where: { id: participant.id }
+                });
+            }
+            catch (error) {
+                handlePrismaError(error, 'Failed to leave study session');
+            }
             const updatedSession = await index_1.prisma.studySession.findUnique({
                 where: { id: sessionId },
                 include: { participants: true }
@@ -163,11 +223,17 @@ exports.resolvers = {
                 throw new Error('Only the creator can cancel this session');
             if (session.status === 'CANCELLED')
                 throw new Error('Study session is already cancelled');
-            const updatedSession = await index_1.prisma.studySession.update({
-                where: { id: sessionId },
-                data: { status: 'CANCELLED' },
-                include: { participants: true }
-            });
+            let updatedSession;
+            try {
+                updatedSession = await index_1.prisma.studySession.update({
+                    where: { id: sessionId },
+                    data: { status: 'CANCELLED' },
+                    include: { participants: true }
+                });
+            }
+            catch (error) {
+                handlePrismaError(error, 'Failed to cancel study session');
+            }
             await (0, producer_1.publishEvent)('study-session-cancelled', {
                 sessionId,
                 userId

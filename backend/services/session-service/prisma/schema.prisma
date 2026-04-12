@@ -13,10 +13,11 @@ model StudySession {
   description  String?
   date         DateTime
   duration     Int
-  sessionType SessionType
+  sessionType  SessionType
   location     String?
   meetingLink  String?
-  status      SessionStatus @default(UPCOMING)
+  contactInfo  String?
+  status       SessionStatus @default(UPCOMING)
   participants SessionParticipant[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt

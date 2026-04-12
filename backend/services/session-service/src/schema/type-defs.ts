@@ -17,6 +17,7 @@ export const typeDefs = `#graphql
     sessionType: String!
     location: String
     meetingLink: String
+    contactInfo: String
     status: String!
     participants: [SessionParticipant!]!
     createdAt: String!
@@ -40,6 +41,7 @@ export const typeDefs = `#graphql
       sessionType: String!
       location: String
       meetingLink: String
+      contactInfo: String
     ): StudySession!
 
     joinStudySession(
