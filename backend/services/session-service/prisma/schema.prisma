@@ -13,10 +13,10 @@ model StudySession {
   description  String?
   date         DateTime
   duration     Int
-  sessionType  String
+  sessionType SessionType
   location     String?
   meetingLink  String?
-  status       String               @default("UPCOMING")
+  status      SessionStatus @default(UPCOMING)
   participants SessionParticipant[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
@@ -29,4 +29,19 @@ model SessionParticipant {
   userId    String
   status    String       @default("INVITED")
   joinedAt  DateTime?
+
+
+  @@unique([sessionId, userId])
 }
+
+enum SessionType {
+  ONLINE
+  IN_PERSON
+}
+
+enum SessionStatus {
+  UPCOMING
+  CANCELLED
+  COMPLETED
+}
+
