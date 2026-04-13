@@ -6,6 +6,7 @@ export const resolvers = {
   Query: {
     getConversation: async (_: any, { otherUserId }: { otherUserId: string }, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
+      if (userId === otherUserId) throw new Error('Cannot have a conversation with yourself');
 
       return await prisma.conversation.findFirst({
         where: {
@@ -28,7 +29,8 @@ export const resolvers = {
             { participant2: userId }
           ]
         },
-        include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } }
+        include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
+        orderBy: { updatedAt: 'desc' }
       });
     },
 
@@ -41,7 +43,7 @@ export const resolvers = {
 
       if (!conversation) throw new Error('Conversation not found');
       if (conversation.participant1 !== userId && conversation.participant2 !== userId) {
-        throw new Error('Not authorized');
+        throw new Error('Not authorized to view this conversation');
       }
 
       return await prisma.message.findMany({
@@ -54,7 +56,10 @@ export const resolvers = {
   Mutation: {
     sendMessage: async (_: any, { receiverId, content }: { receiverId: string, content: string }, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
+      if (!receiverId) throw new Error('Receiver ID is required');
+      if (userId === receiverId) throw new Error('Cannot send a message to yourself');
       if (!content.trim()) throw new Error('Message cannot be empty');
+      if (content.trim().length > 1000) throw new Error('Message cannot exceed 1000 characters');
 
       let conversation = await prisma.conversation.findFirst({
         where: {
