@@ -1,14 +1,14 @@
 {
-  "name": "availability-service",
+  "name": "messaging-service",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "postinstall": "prisma generate"
-  },
+  "dev": "nodemon --exec ts-node src/index.ts",
+  "build": "tsc",
+  "start": "node dist/index.js",
+  "postinstall": "prisma generate"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,7 +17,7 @@
     "@apollo/server": "^5.5.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.4.2",
     "graphql": "^16.13.2",
     "jsonwebtoken": "^9.0.3",
     "kafkajs": "^2.2.4",
@@ -27,7 +27,6 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
