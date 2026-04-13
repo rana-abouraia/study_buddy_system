@@ -1,0 +1,9 @@
+services:
+  profile-service:
+    build:
+      context: .
+    env_file:
+      - ./.env
+    ports:
+      - "4003:4002"
+    command: sh -c "npx prisma migrate deploy && npm start"

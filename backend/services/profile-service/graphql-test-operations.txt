@@ -1,0 +1,226 @@
+PROFILE SERVICE GRAPHQL TEST OPERATIONS
+
+Use this header when testing authenticated operations:
+Authorization: Bearer YOUR_TOKEN
+
+--------------------------------------------------
+QUERY: meProfile
+--------------------------------------------------
+query {
+  meProfile {
+    id
+    userId
+    studyPace
+    studyMode
+    groupSize
+    studyStyles
+    preferredTimes
+    sessionLength
+    courses {
+      id
+      name
+      code
+      term
+    }
+    topics {
+      id
+      name
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+--------------------------------------------------
+QUERY: getProfile
+--------------------------------------------------
+query {
+  getProfile(userId: "USER_ID_HERE") {
+    id
+    userId
+    studyPace
+    studyMode
+    groupSize
+    studyStyles
+    preferredTimes
+    sessionLength
+    courses {
+      id
+      name
+      code
+      term
+    }
+    topics {
+      id
+      name
+    }
+  }
+}
+
+--------------------------------------------------
+QUERY: getPreferences
+--------------------------------------------------
+query {
+  getPreferences(userId: "USER_ID_HERE") {
+    studyPace
+    studyMode
+    groupSize
+    studyStyles
+    preferredTimes
+    sessionLength
+  }
+}
+
+--------------------------------------------------
+QUERY: getCoursesAndTopics
+--------------------------------------------------
+query {
+  getCoursesAndTopics(userId: "USER_ID_HERE") {
+    courses {
+      id
+      name
+      code
+      term
+    }
+    topics {
+      id
+      name
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: updatePreferences
+--------------------------------------------------
+mutation {
+  updatePreferences(
+    input: {
+      studyPace: "Moderate"
+      studyMode: "ONLINE"
+      groupSize: "2-3"
+      studyStyles: ["Discussion", "Quiet Study"]
+      preferredTimes: ["Afternoon", "Evening"]
+      sessionLength: "1-2 hours"
+    }
+  ) {
+    id
+    userId
+    studyPace
+    studyMode
+    groupSize
+    studyStyles
+    preferredTimes
+    sessionLength
+  }
+}
+
+--------------------------------------------------
+MUTATION: replaceCourses
+--------------------------------------------------
+mutation {
+  replaceCourses(
+    courses: [
+      { name: "Data Structures", code: "CS101", term: "Fall 2025" }
+      { name: "Algorithms", code: "CS201", term: "Fall 2025" }
+      { name: "Databases", code: "CS305", term: "Spring 2026" }
+    ]
+  ) {
+    userId
+    courses {
+      id
+      name
+      code
+      term
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: addCourse
+--------------------------------------------------
+mutation {
+  addCourse(
+    input: {
+      name: "Linear Algebra"
+      code: "MATH201"
+      term: "Fall 2025"
+    }
+  ) {
+    userId
+    courses {
+      id
+      name
+      code
+      term
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: removeCourse
+--------------------------------------------------
+mutation {
+  removeCourse(courseId: "COURSE_ID_HERE") {
+    userId
+    courses {
+      id
+      name
+      code
+      term
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: replaceTopics
+--------------------------------------------------
+mutation {
+  replaceTopics(
+    topics: [
+      { name: "React" }
+      { name: "JavaScript" }
+      { name: "Data Structures" }
+      { name: "Algorithms" }
+    ]
+  ) {
+    userId
+    topics {
+      id
+      name
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: addTopic
+--------------------------------------------------
+mutation {
+  addTopic(input: { name: "Web Development" }) {
+    userId
+    topics {
+      id
+      name
+    }
+  }
+}
+
+--------------------------------------------------
+MUTATION: removeTopic
+--------------------------------------------------
+mutation {
+  removeTopic(topicId: "TOPIC_ID_HERE") {
+    userId
+    topics {
+      id
+      name
+    }
+  }
+}
+
+--------------------------------------------------
+RECOMMENDED TEST ORDER
+--------------------------------------------------
+1. updatePreferences
+2. replaceCourses
+3. replaceTopics
+4. meProfile
