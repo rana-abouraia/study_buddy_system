@@ -6,13 +6,88 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+
+
+      services:
+
+       notification-service:
+        build: ./notification-service
+        ports:
+          - "8080:8080"
+        env_file: 
+          - ./notification-service/.env
+        environment:
+          KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+          KAFKA_TOPIC: notifications
+          KAFKA_GROUP_ID: notification-service-group
+
+
+       availability-service:
+        build: ./availability-service
+        ports:
+          - "8081:8081"
+        env_file: 
+          - ./availability-service/.env
+        environment:
+          KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+          KAFKA_TOPIC: availability
+          KAFKA_GROUP_ID: availability-service-group
+
+
+
+        matching-service:
+          build: ./matching-service
+          ports:
+            - "8082:8082"
+          env_file: 
+            - ./matching-service/.env
+          environment:
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+            KAFKA_TOPIC: matching
+            KAFKA_GROUP_ID: matching-service-group
+
+        session-service:
+          build: ./session-service
+          ports:
+            - "8083:8083"
+          env_file: 
+            - ./session-service/.env
+          environment:
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+            KAFKA_TOPIC: sessions
+            KAFKA_GROUP_ID: session-service-group
+        
+
+        user-service:
+          build: ./user-service
+          ports:
+            - "8084:8084"
+          env_file: 
+            - ./user-service/.env
+          environment:
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+            KAFKA_TOPIC: users
+            KAFKA_GROUP_ID: user-service-group
+
+        profile-service:
+          build: ./profile-service
+          ports:
+            - "8085:8085"
+          env_file: 
+            - ./profile-service/.env
+          environment:
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+            KAFKA_TOPIC: profiles
+            KAFKA_GROUP_ID: profile-service-group 
+        
