@@ -1,19 +1,13 @@
 {
   "name": "api-gateway",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
- "scripts": {
+  "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@apollo/gateway": "^2.13.3",
+    "@apollo/gateway": "^2.7.0",
     "@apollo/server": "^5.5.0",
     "dotenv": "^17.4.1",
     "graphql": "^16.13.2"

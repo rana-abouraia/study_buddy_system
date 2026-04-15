@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 const kafka = new Kafka({
   clientId: 'profile-service',
-  brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
+  brokers: [process.env.KAFKA_BROKER || 'kafka:9092'],
 });
 
 const producer = kafka.producer();

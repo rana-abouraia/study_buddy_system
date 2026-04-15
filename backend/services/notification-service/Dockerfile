@@ -1,21 +1,23 @@
-ARG NODE_VERSION=22.19.0
-
-FROM node:${NODE_VERSION}-alpine
+FROM node:22-slim
 
 WORKDIR /usr/src/app
 
+# Prisma + system dependencies
+RUN apt-get update && apt-get install -y openssl
+
+# Install dependencies first (cache optimization)
 COPY package*.json ./
-COPY prisma ./prisma
+RUN npm install --legacy-peer-deps
 
-RUN npm install
-RUN npx prisma generate
+# Copy full source
+COPY . .
 
-COPY src ./src
-COPY tsconfig.json ./tsconfig.json
-COPY prisma.config.ts ./prisma.config.ts
+# Prisma generate (only if exists)
+RUN if [ -f "prisma/schema.prisma" ]; then npx prisma generate; fi
 
-ENV NODE_ENV=development
+# Build TypeScript (only if TS exists)
+RUN if [ -f "tsconfig.json" ]; then npm run build; fi
 
 EXPOSE 4006
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "start"]

@@ -8,7 +8,7 @@ import type {
   UserPreferencesUpdatedPayload
 } from "../types/events.js";
 
-const brokers = (process.env.KAFKA_BROKERS || "localhost:9092")
+const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
   .split(",")
   .map((b) => b.trim());
 

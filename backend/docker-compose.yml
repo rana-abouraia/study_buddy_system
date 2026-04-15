@@ -7,96 +7,115 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   user-service:
-    build:
-      context: ./services/user-service
-    container_name: user-service
-    env_file:
-      - ./services/user-service/.env
+    build: ./services/user-service
+    env_file: ./services/user-service/.env
     ports:
       - "4001:4001"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   profile-service:
-    build:
-      context: ./services/profile-service
-    container_name: profile-service
-    env_file:
-      - ./services/profile-service/.env
+    build: ./services/profile-service
+    env_file: ./services/profile-service/.env
     ports:
       - "4002:4002"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   availability-service:
-    build:
-      context: ./services/availability-service
-    container_name: availability-service
-    env_file:
-      - ./services/availability-service/.env
+    build: ./services/availability-service
+    env_file: ./services/availability-service/.env
     ports:
       - "4003:4003"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   matching-service:
-    build:
-      context: ./services/matching-service
-    container_name: matching-service
-    env_file:
-      - ./services/matching-service/.env
+    build: ./services/matching-service
+    env_file: ./services/matching-service/.env
     ports:
       - "4004:4004"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   session-service:
-    build:
-      context: ./services/session-service
-    container_name: session-service
-    env_file:
-      - ./services/session-service/.env
+    build: ./services/session-service
+    env_file: ./services/session-service/.env
     ports:
       - "4005:4005"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   notification-service:
-    build:
-      context: ./services/notification-service
-    container_name: notification-service
-    env_file:
-      - ./services/notification-service/.env
+    build: ./services/notification-service
+    env_file: ./services/notification-service/.env
     ports:
       - "4006:4006"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
 
   messaging-service:
-    build:
-      context: ./services/messaging-service
-    container_name: messaging-service
-    env_file:
-      - ./services/messaging-service/.env
+    build: ./services/messaging-service
+    env_file: ./services/messaging-service/.env
     ports:
       - "4007:4007"
     depends_on:
-      - kafka
-    command: sh -c "npx prisma migrate deploy && npm start"
+      kafka:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    restart: on-failure
+
+  api-gateway:
+    build: ./api-gateway
+    env_file: ./api-gateway/.env
+    ports:
+      - "4000:4000"
+    depends_on:
+      user-service:
+        condition: service_started
+      profile-service:
+        condition: service_started
+      availability-service:
+        condition: service_started
+      matching-service:
+        condition: service_started
+      session-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      messaging-service:
+        condition: service_started
+    restart: on-failure
