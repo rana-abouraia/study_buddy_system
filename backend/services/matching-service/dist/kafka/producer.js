@@ -4,7 +4,7 @@ exports.connectProducer = connectProducer;
 exports.publishMatchFoundEvent = publishMatchFoundEvent;
 const kafkajs_1 = require("kafkajs");
 const topics_js_1 = require("./topics.js");
-const brokers = (process.env.KAFKA_BROKERS || "localhost:9092")
+const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
     .split(",")
     .map((b) => b.trim());
 const kafka = new kafkajs_1.Kafka({
