@@ -2,11 +2,19 @@
   "name": "profile-service",
   "version": "1.0.0",
   "description": "",
+<<<<<<< HEAD
   "main": "dist/src/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/src/index.js"
+=======
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+>>>>>>> main
   },
   "keywords": [],
   "author": "",
@@ -14,6 +22,7 @@
   "type": "commonjs",
   "dependencies": {
     "@apollo/server": "^5.5.0",
+    "@apollo/subgraph": "^2.13.3",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "dotenv": "^17.4.1",

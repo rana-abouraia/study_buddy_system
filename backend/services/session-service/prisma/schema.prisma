@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 model StudySession {
@@ -46,4 +45,3 @@ enum SessionStatus {
   CANCELLED
   COMPLETED
 }
-

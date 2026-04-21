@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Kafka } from "kafkajs";
 import { TOPICS } from "./topics.js";
 import type { BaseEvent, MatchFoundPayload } from "../types/events.js";
@@ -28,7 +29,7 @@ export async function publishMatchFoundEvent(payload: MatchFoundPayload) {
     eventName: TOPICS.MATCH_FOUND,
     timestamp: new Date().toISOString(),
     producerService: "matching-service",
-    correlationId: crypto.randomUUID(),
+    correlationId: randomUUID(),
     payload
   };
 
