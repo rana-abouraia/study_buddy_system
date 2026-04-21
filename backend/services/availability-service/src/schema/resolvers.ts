@@ -2,18 +2,22 @@ import { prisma } from '../index';
 import { Context } from '../index';
 import { publishEvent } from '../kafka/producer';
 
+const isValidTime = (time: string) => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+
 export const resolvers = {
   Query: {
     getMyAvailability: async (_: any, __: any, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
       return await prisma.availabilitySlot.findMany({
-        where: { userId }
+        where: { userId },
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
       });
     },
 
     getUserAvailability: async (_: any, { userId }: { userId: string }) => {
       return await prisma.availabilitySlot.findMany({
-        where: { userId }
+        where: { userId },
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
       });
     }
   },
@@ -21,16 +25,17 @@ export const resolvers = {
   Mutation: {
     addAvailabilitySlot: async (_: any, args: any, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
+      if (args.dayOfWeek < 0 || args.dayOfWeek > 6) throw new Error('Day of week must be between 0 (Sunday) and 6 (Saturday)');
+      if (!isValidTime(args.startTime)) throw new Error('Invalid start time format. Use HH:MM');
+      if (!isValidTime(args.endTime)) throw new Error('Invalid end time format. Use HH:MM');
+      if (args.startTime >= args.endTime) throw new Error('Start time must be before end time');
 
       const existingSlots = await prisma.availabilitySlot.findMany({
         where: { userId, dayOfWeek: args.dayOfWeek }
       });
 
-      const newStart = args.startTime;
-      const newEnd = args.endTime;
-
       const hasOverlap = existingSlots.some((slot) => {
-        return newStart < slot.endTime && newEnd > slot.startTime;
+        return args.startTime < slot.endTime && args.endTime > slot.startTime;
       });
 
       if (hasOverlap) throw new Error('Overlapping availability slot exists');
@@ -61,17 +66,18 @@ export const resolvers = {
         where: { id: args.id }
       });
 
-      if (!slot || slot.userId !== userId) throw new Error('Not authorized');
+      if (!slot) throw new Error('Slot not found');
+      if (slot.userId !== userId) throw new Error('Not authorized');
 
       const newStart = args.startTime || slot.startTime;
       const newEnd = args.endTime || slot.endTime;
 
+      if (!isValidTime(newStart)) throw new Error('Invalid start time format. Use HH:MM');
+      if (!isValidTime(newEnd)) throw new Error('Invalid end time format. Use HH:MM');
+      if (newStart >= newEnd) throw new Error('Start time must be before end time');
+
       const existingSlots = await prisma.availabilitySlot.findMany({
-        where: {
-          userId,
-          dayOfWeek: slot.dayOfWeek,
-          NOT: { id: args.id }
-        }
+        where: { userId, dayOfWeek: slot.dayOfWeek, NOT: { id: args.id } }
       });
 
       const hasOverlap = existingSlots.some((s) => {
@@ -105,7 +111,8 @@ export const resolvers = {
         where: { id }
       });
 
-      if (!slot || slot.userId !== userId) throw new Error('Not authorized');
+      if (!slot) throw new Error('Slot not found');
+      if (slot.userId !== userId) throw new Error('Not authorized');
 
       await prisma.availabilitySlot.delete({ where: { id } });
 

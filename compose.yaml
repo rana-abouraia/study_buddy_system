@@ -1,0 +1,12 @@
+services:
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/services/notification-service/.env
+    environment:
+      PORT: 4006
+      KAFKA_BROKER: host.docker.internal:9092
+    ports:
+      - "4006:4006"

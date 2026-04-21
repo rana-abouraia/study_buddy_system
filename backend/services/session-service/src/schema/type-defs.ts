@@ -1,12 +1,4 @@
 export const typeDefs = `#graphql
-  type SessionParticipant {
-    id: ID!
-    sessionId: String!
-    userId: String!
-    status: String!
-    joinedAt: String
-  }
-
   type StudySession {
     id: ID!
     creatorId: String!
@@ -17,23 +9,28 @@ export const typeDefs = `#graphql
     sessionType: String!
     location: String
     meetingLink: String
-    contactInfo: String
     status: String!
-    participants: [SessionParticipant!]!
+    participants: [SessionParticipant]
     createdAt: String!
     updatedAt: String!
   }
 
+  type SessionParticipant {
+    id: ID!
+    sessionId: String!
+    userId: String!
+    status: String!
+    joinedAt: String
+  }
+
   type Query {
-    getStudySessions: [StudySession]
-    getStudySessionById(id: ID!): StudySession
-    getSessionsByCreator(creatorId: String!): [StudySession]
-    getSessionsByParticipant(userId: String!): [StudySession]
+    getSession(id: ID!): StudySession
+    getMySessions: [StudySession]
+    getAllSessions: [StudySession]
   }
 
   type Mutation {
-    createStudySession(
-      creatorId: String!
+    createSession(
       topic: String!
       description: String
       date: String!
@@ -41,22 +38,12 @@ export const typeDefs = `#graphql
       sessionType: String!
       location: String
       meetingLink: String
-      contactInfo: String
     ): StudySession!
 
-    joinStudySession(
-      sessionId: ID!
-      userId: String!
-    ): StudySession!
+    joinSession(sessionId: ID!): SessionParticipant!
 
-    leaveStudySession(
-      sessionId: ID!
-      userId: String!
-    ): StudySession!
+    leaveSession(sessionId: ID!): Boolean!
 
-    cancelStudySession(
-      sessionId: ID!
-      userId: String!
-    ): StudySession!
+    cancelSession(sessionId: ID!): Boolean!
   }
 `;

@@ -5,7 +5,7 @@ dotenv.config();
 
 const kafka = new Kafka({
   clientId: 'session-service',
-  brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
+  brokers: [process.env.KAFKA_BROKER || 'kafka:9092']
 });
 
 const producer = kafka.producer();
@@ -28,8 +28,8 @@ export const publishEvent = async (topic: string, payload: object) => {
       ]
     });
     await producer.disconnect();
-    console.log(`Event published to topic: ${topic}`);
+    console.log(`📨 Event published to topic: ${topic}`);
   } catch (error) {
-    console.error(`Failed to publish event to topic ${topic}:`, error);
+    console.error(`❌ Failed to publish event:`, error);
   }
 };

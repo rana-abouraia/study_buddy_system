@@ -4,27 +4,52 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Match {
-  id                 String      @id @default(uuid())
-  userId1            String
-  userId2            String
-  compatibilityScore Int
-  sharedCourses      String[]
-  sharedTopics       String[]
-  overlappingTime    Int
-  status             String      @default("PENDING")
-  createdAt          DateTime    @default(now())
+model MatchProfile {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  courses           String[]
+  topics            String[]
+  studyPace         String?
+  studyMode         String?
+  groupSize         Int?
+  studyStyle        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  @@unique([userId1, userId2])
+  availabilitySlots AvailabilitySlot[]
+  matchesAsUser     MatchResult[]      @relation("UserMatches")
+  matchesAsCandidate MatchResult[]     @relation("CandidateMatches")
 }
 
-model BuddyRequest {
-  id         String   @id @default(uuid())
-  senderId   String
-  receiverId String
-  status     String   @default("PENDING")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model AvailabilitySlot {
+  id          String       @id @default(cuid())
+  userId      String
+  dayOfWeek   String
+  startTime   String
+  endTime     String
+  createdAt   DateTime     @default(now())
+
+  profile     MatchProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model MatchResult {
+  id               String       @id @default(cuid())
+  userId           String
+  candidateUserId  String
+  compatibility    Float
+  reasons          String[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user             MatchProfile @relation("UserMatches", fields: [userId], references: [userId], onDelete: Cascade)
+  candidate        MatchProfile @relation("CandidateMatches", fields: [candidateUserId], references: [userId], onDelete: Cascade)
+
+  @@unique([userId, candidateUserId])
+  @@index([userId])
+  @@index([candidateUserId])
 }
