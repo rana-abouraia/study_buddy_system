@@ -61,6 +61,14 @@ export const resolvers = {
       if (!content.trim()) throw new Error('Message cannot be empty');
       if (content.trim().length > 1000) throw new Error('Message cannot exceed 1000 characters');
 
+      const [userA, userB] = userId < receiverId ? [userId, receiverId] : [receiverId, userId];
+      const connection = await prisma.connection.findUnique({
+        where: { userA_userB: { userA, userB } },
+      });
+      if (!connection) {
+        throw new Error('You can only message connected study buddies (accept a buddy request or get matched first)');
+      }
+
       let conversation = await prisma.conversation.findFirst({
         where: {
           OR: [
@@ -85,6 +93,11 @@ export const resolvers = {
           senderId: userId,
           content: content.trim()
         }
+      });
+
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { updatedAt: new Date() }
       });
 
       await publishEvent('notification-created', {

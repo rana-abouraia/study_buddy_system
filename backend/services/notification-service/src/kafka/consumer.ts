@@ -12,6 +12,10 @@ const DEFAULT_TOPICS = [
   'session-reminder',
   'study-session-reminder',
   'session-upcoming',
+  'study-session-created',
+  'study-session-joined',
+  'study-session-cancelled',
+  'notification-created',
 ];
 
 const getTopics = () => {

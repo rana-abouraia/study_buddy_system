@@ -1,5 +1,5 @@
 export const typeDefs = `#graphql
-  type AvailabilitySlot {
+  type MatchAvailabilitySlot {
     id: ID!
     dayOfWeek: String!
     startTime: String!
@@ -15,7 +15,7 @@ export const typeDefs = `#graphql
     studyMode: String
     groupSize: Int
     studyStyle: String
-    availabilitySlots: [AvailabilitySlot!]!
+    availabilitySlots: [MatchAvailabilitySlot!]!
     createdAt: String!
     updatedAt: String!
   }
@@ -30,12 +30,27 @@ export const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type BuddyRequest {
+    id: ID!
+    senderId: String!
+    receiverId: String!
+    status: String!
+    createdAt: String!
+    updatedAt: String!
+  }
+
   type Query {
-    getRecommendedMatches(userId: String!, limit: Int): [MatchResult!]!
-    getMatchProfile(userId: String!): MatchProfile
+    getRecommendedMatches(userId: String, limit: Int): [MatchResult!]!
+    getMatchProfile(userId: String): MatchProfile
+    getIncomingBuddyRequests: [BuddyRequest!]!
+    getOutgoingBuddyRequests: [BuddyRequest!]!
+    getMyBuddies: [String!]!
   }
 
   type Mutation {
-    recalculateMatches(userId: String!): [MatchResult!]!
+    recalculateMatches(userId: String): [MatchResult!]!
+    sendBuddyRequest(receiverId: String!): BuddyRequest!
+    acceptBuddyRequest(requestId: String!): BuddyRequest!
+    rejectBuddyRequest(requestId: String!): BuddyRequest!
   }
 `;

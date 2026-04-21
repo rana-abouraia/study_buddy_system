@@ -3,7 +3,7 @@ dotenv.config();
 
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { stitchSchemas, ValidationLevel } from '@graphql-tools/stitch';
+import { stitchSchemas } from '@graphql-tools/stitch';
 import { schemaFromExecutor } from '@graphql-tools/wrap';
 import { buildHTTPExecutor } from '@graphql-tools/executor-http';
 
@@ -73,16 +73,7 @@ async function startServer() {
   );
 
   // Stitch all service schemas into one unified schema
-  const schema = stitchSchemas({
-    subschemas,
-    typeMergingOptions: {
-      validationScopes: {
-        'AvailabilitySlot.dayOfWeek': {
-          validationLevel: ValidationLevel.Off
-        }
-      }
-    }
-  });
+  const schema = stitchSchemas({ subschemas });
 
   const server = new ApolloServer({ schema });
 

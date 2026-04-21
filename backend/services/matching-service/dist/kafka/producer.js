@@ -2,9 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectProducer = connectProducer;
 exports.publishMatchFoundEvent = publishMatchFoundEvent;
+const crypto_1 = require("crypto");
 const kafkajs_1 = require("kafkajs");
 const topics_js_1 = require("./topics.js");
-const brokers = (process.env.KAFKA_BROKERS || "localhost:9092")
+const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
     .split(",")
     .map((b) => b.trim());
 const kafka = new kafkajs_1.Kafka({
@@ -25,7 +26,7 @@ async function publishMatchFoundEvent(payload) {
         eventName: topics_js_1.TOPICS.MATCH_FOUND,
         timestamp: new Date().toISOString(),
         producerService: "matching-service",
-        correlationId: crypto.randomUUID(),
+        correlationId: (0, crypto_1.randomUUID)(),
         payload
     };
     await producer.send({

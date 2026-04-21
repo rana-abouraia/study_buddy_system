@@ -1,4 +1,5 @@
 import path from 'path';
+import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import { Kafka } from 'kafkajs';
 
@@ -11,10 +12,18 @@ const kafka = new Kafka({
 });
 
 const producer = kafka.producer();
+let connected = false;
+
+const ensureConnected = async () => {
+  if (!connected) {
+    await producer.connect();
+    connected = true;
+  }
+};
 
 export const publishEvent = async (topic: string, payload: object) => {
   try {
-    await producer.connect();
+    await ensureConnected();
     await producer.send({
       topic,
       messages: [
@@ -23,13 +32,12 @@ export const publishEvent = async (topic: string, payload: object) => {
             eventName: topic,
             timestamp: new Date().toISOString(),
             producerService: 'profile-service',
-            correlationId: Math.random().toString(36).slice(2),
+            correlationId: randomUUID(),
             payload,
           }),
         },
       ],
     });
-    await producer.disconnect();
     console.log(`Event published to topic: ${topic}`);
   } catch (error) {
     console.error(`Failed to publish event to topic ${topic}:`, error);

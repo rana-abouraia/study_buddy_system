@@ -4,7 +4,7 @@ import { prisma } from '../index';
 import { Context } from '../index';
 import { publishEvent } from '../kafka/producer';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'study-buddy-dev-secret';
 
 export const resolvers = {
   Query: {

@@ -1,7 +1,12 @@
 import { randomUUID } from "crypto";
 import { Kafka } from "kafkajs";
 import { TOPICS } from "./topics.js";
-import type { BaseEvent, MatchFoundPayload } from "../types/events.js";
+import type {
+  BaseEvent,
+  BuddyRequestAcceptedPayload,
+  BuddyRequestReceivedPayload,
+  MatchFoundPayload
+} from "../types/events.js";
 
 const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
   .split(",")
@@ -35,6 +40,40 @@ export async function publishMatchFoundEvent(payload: MatchFoundPayload) {
 
   await producer.send({
     topic: TOPICS.MATCH_FOUND,
+    messages: [{ value: JSON.stringify(event) }]
+  });
+}
+
+export async function publishBuddyRequestReceived(
+  payload: BuddyRequestReceivedPayload
+) {
+  const event: BaseEvent<BuddyRequestReceivedPayload> = {
+    eventName: TOPICS.BUDDY_REQUEST_RECEIVED,
+    timestamp: new Date().toISOString(),
+    producerService: "matching-service",
+    correlationId: randomUUID(),
+    payload
+  };
+
+  await producer.send({
+    topic: TOPICS.BUDDY_REQUEST_RECEIVED,
+    messages: [{ value: JSON.stringify(event) }]
+  });
+}
+
+export async function publishBuddyRequestAccepted(
+  payload: BuddyRequestAcceptedPayload
+) {
+  const event: BaseEvent<BuddyRequestAcceptedPayload> = {
+    eventName: TOPICS.BUDDY_REQUEST_ACCEPTED,
+    timestamp: new Date().toISOString(),
+    producerService: "matching-service",
+    correlationId: randomUUID(),
+    payload
+  };
+
+  await producer.send({
+    topic: TOPICS.BUDDY_REQUEST_ACCEPTED,
     messages: [{ value: JSON.stringify(event) }]
   });
 }

@@ -9,6 +9,35 @@ import type {
 const MATCH_MIN_SCORE = Number(process.env.MATCH_MIN_SCORE || 10);
 const TOP_MATCH_LIMIT = Number(process.env.TOP_MATCH_LIMIT || 10);
 
+const DAY_NAME_TO_INT: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6
+};
+
+// Defensive normalization: upstream payloads can carry dayOfWeek as an Int
+// (from availability-service), a numeric string ("1"), a day name ("Monday"),
+// or — due to JSON quirks — NaN / null / undefined. The matching-service
+// Prisma schema expects Int (0-6). Returns null for anything we cannot
+// convert so the caller can drop that slot.
+const normalizeDayOfWeek = (raw: unknown): number | null => {
+  if (typeof raw === "number" && Number.isFinite(raw) && Number.isInteger(raw) && raw >= 0 && raw <= 6) {
+    return raw;
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim().toLowerCase();
+    if (!trimmed || trimmed === "nan" || trimmed === "undefined" || trimmed === "null") return null;
+    if (trimmed in DAY_NAME_TO_INT) return DAY_NAME_TO_INT[trimmed];
+    const asNum = Number(trimmed);
+    if (Number.isInteger(asNum) && asNum >= 0 && asNum <= 6) return asNum;
+  }
+  return null;
+};
+
 type RankedMatch = {
   candidateUserId: string;
   compatibility: number;
@@ -57,15 +86,35 @@ export class MatchingService {
         where: { userId: payload.userId }
       });
 
-      if (payload.availability.length > 0) {
-        await tx.availabilitySlot.createMany({
-          data: payload.availability.map((slot) => ({
-            userId: payload.userId,
-            dayOfWeek: slot.dayOfWeek,
-            startTime: slot.startTime,
-            endTime: slot.endTime
-          }))
+      type CleanedSlot = {
+        userId: string;
+        dayOfWeek: number;
+        startTime: string;
+        endTime: string;
+      };
+
+      const cleanedSlots: CleanedSlot[] = [];
+      for (const slot of payload.availability) {
+        const dow = normalizeDayOfWeek((slot as { dayOfWeek: unknown }).dayOfWeek);
+        if (dow === null || !slot.startTime || !slot.endTime) continue;
+        cleanedSlots.push({
+          userId: payload.userId,
+          dayOfWeek: dow,
+          startTime: slot.startTime,
+          endTime: slot.endTime
         });
+      }
+
+      if (cleanedSlots.length !== payload.availability.length) {
+        console.warn(
+          `[matching-service] replaceAvailability: dropped ${
+            payload.availability.length - cleanedSlots.length
+          } invalid slot(s) for user ${payload.userId}`
+        );
+      }
+
+      if (cleanedSlots.length > 0) {
+        await tx.availabilitySlot.createMany({ data: cleanedSlots });
       }
     });
 

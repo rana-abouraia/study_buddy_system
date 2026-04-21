@@ -17,7 +17,7 @@ export interface Context {
   prisma: PrismaClient;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || '123456';
+const JWT_SECRET = process.env.JWT_SECRET || 'study-buddy-dev-secret';
 
 async function main() {
   const server = new ApolloServer<Context>({

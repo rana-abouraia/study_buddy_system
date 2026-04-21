@@ -20,7 +20,20 @@ const consumer = kafka.consumer({
   groupId: "matching-service-group"
 });
 
-function mapDayOfWeek(day: number): string {
+function parseGroupSize(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const match = value.match(/\d+/);
+    if (match) {
+      const n = parseInt(match[0], 10);
+      return Number.isFinite(n) ? n : null;
+    }
+  }
+  return null;
+}
+
+function mapDayOfWeek(day: number | string): string {
+  if (typeof day === "string") return day;
   const days = [
     "Sunday",
     "Monday",
@@ -67,10 +80,7 @@ export async function startConsumer() {
             topics: payload.topics?.map((topic) => topic.name) ?? [],
             studyPace: payload.studyPace ?? null,
             studyMode: payload.studyMode ?? null,
-            groupSize:
-              payload.groupSize && !Number.isNaN(Number(payload.groupSize))
-                ? Number(payload.groupSize)
-                : null,
+            groupSize: parseGroupSize(payload.groupSize),
             studyStyle: payload.studyStyles?.[0] ?? null
           });
 
@@ -84,6 +94,24 @@ export async function startConsumer() {
           const event = parsed as BaseEvent<AvailabilityUpdatedPayload>;
           const payload = event.payload;
 
+          // New snapshot-style payload: { userId, slots: [...] }
+          if (Array.isArray(payload.slots)) {
+            await matchingService.replaceAvailability({
+              userId: payload.userId,
+              availability: payload.slots.map((slot) => ({
+                dayOfWeek: mapDayOfWeek(slot.dayOfWeek),
+                startTime: slot.startTime,
+                endTime: slot.endTime
+              }))
+            });
+
+            console.log(
+              `[matching-service] handled ${topic} snapshot for user ${payload.userId} (${payload.slots.length} slots)`
+            );
+            return;
+          }
+
+          // Legacy per-action payload fallback (kept for backward-compat only)
           if (payload.action === "DELETED") {
             await matchingService.replaceAvailability({
               userId: payload.userId,

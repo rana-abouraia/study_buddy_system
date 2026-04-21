@@ -27,6 +27,7 @@ export const typeDefs = `#graphql
     getSession(id: ID!): StudySession
     getMySessions: [StudySession]
     getAllSessions: [StudySession]
+    getMyInvitations: [SessionParticipant]
   }
 
   type Mutation {
@@ -38,6 +39,7 @@ export const typeDefs = `#graphql
       sessionType: String!
       location: String
       meetingLink: String
+      participantIds: [ID!]
     ): StudySession!
 
     joinSession(sessionId: ID!): SessionParticipant!
@@ -45,5 +47,7 @@ export const typeDefs = `#graphql
     leaveSession(sessionId: ID!): Boolean!
 
     cancelSession(sessionId: ID!): Boolean!
+
+    respondToSessionInvitation(sessionId: ID!, accept: Boolean!): SessionParticipant!
   }
 `;

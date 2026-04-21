@@ -34,7 +34,16 @@ export interface NormalizedAvailabilitySlot {
 
 export interface AvailabilityUpdatedPayload {
   userId: string;
-  action: "ADDED" | "UPDATED" | "DELETED";
+  // New snapshot-style payload: full list of current slots
+  slots?: Array<{
+    id?: string;
+    dayOfWeek: number | string;
+    startTime: string;
+    endTime: string;
+    isRecurring?: boolean;
+  }>;
+  // Legacy per-action fields (kept for back-compat, no longer emitted)
+  action?: "ADDED" | "UPDATED" | "DELETED";
   slot?: {
     id?: string;
     userId?: string;
@@ -68,4 +77,18 @@ export interface MatchFoundPayload {
   matchedUserId: string;
   compatibilityScore: number;
   reasons: string[];
+}
+
+export interface BuddyRequestReceivedPayload {
+  requestId: string;
+  senderId: string;
+  receiverId: string;
+}
+
+export interface BuddyRequestAcceptedPayload {
+  requestId: string;
+  senderId: string;
+  receiverId: string;
+  accepterId: string;
+  recipientId: string;
 }
