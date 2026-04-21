@@ -3,7 +3,7 @@ FROM node:22-slim
 WORKDIR /usr/src/app
 
 # Prisma + system dependencies
-RUN apt-get update && apt-get install -y openssl
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (cache optimization)
 COPY package*.json ./

@@ -4,11 +4,10 @@ import { matchingService } from "../services/matching.service.js";
 import type {
   BaseEvent,
   AvailabilityUpdatedPayload,
-  UserCreatedPayload,
   UserPreferencesUpdatedPayload
 } from "../types/events.js";
 
-const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
+const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || "kafka:9092")
   .split(",")
   .map((b) => b.trim());
 
@@ -21,67 +20,32 @@ const consumer = kafka.consumer({
   groupId: "matching-service-group"
 });
 
-const TOPIC_LIST = [
-  TOPICS.USER_CREATED,
-  TOPICS.USER_PREFERENCES_UPDATED,
-  TOPICS.AVAILABILITY_UPDATED,
-  TOPICS.MATCH_FOUND
-];
+function mapDayOfWeek(day: number): string {
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ];
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function ensureTopicsExist() {
-  const admin = kafka.admin();
-  await admin.connect();
-
-  try {
-    await admin.createTopics({
-      waitForLeaders: true,
-      topics: TOPIC_LIST.map((topic) => ({
-        topic,
-        numPartitions: 1,
-        replicationFactor: 1
-      }))
-    });
-  } finally {
-    await admin.disconnect();
-  }
-}
-
-async function ensureTopicsWithRetry(retries = 8, delayMs = 2000) {
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await ensureTopicsExist();
-      return;
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        `[matching-service] topic setup failed (${attempt}/${retries}), retrying...`,
-        error
-      );
-
-      if (attempt < retries) {
-        await sleep(delayMs);
-      }
-    }
-  }
-
-  throw lastError;
+  return days[day] ?? String(day);
 }
 
 export async function startConsumer() {
-  await sleep(8000);
-  await ensureTopicsWithRetry();
-
   await consumer.connect();
 
-  await consumer.subscribe({ topic: TOPICS.USER_CREATED, fromBeginning: false });
-  await consumer.subscribe({ topic: TOPICS.USER_PREFERENCES_UPDATED, fromBeginning: false });
-  await consumer.subscribe({ topic: TOPICS.AVAILABILITY_UPDATED, fromBeginning: false });
+  await consumer.subscribe({
+    topic: TOPICS.USER_PREFERENCES_UPDATED,
+    fromBeginning: false
+  });
+
+  await consumer.subscribe({
+    topic: TOPICS.AVAILABILITY_UPDATED,
+    fromBeginning: false
+  });
 
   console.log("[matching-service] Kafka consumer connected");
 
@@ -93,31 +57,58 @@ export async function startConsumer() {
 
         const parsed = JSON.parse(rawValue);
 
-        switch (topic) {
-          case TOPICS.USER_CREATED: {
-            const event = parsed as BaseEvent<UserCreatedPayload>;
-            await matchingService.ensureUserExists(event.payload);
-            console.log(`[matching-service] handled ${topic} for user ${event.payload.userId}`);
-            break;
-          }
+        if (topic === TOPICS.USER_PREFERENCES_UPDATED) {
+          const event = parsed as BaseEvent<UserPreferencesUpdatedPayload>;
+          const payload = event.payload;
 
-          case TOPICS.USER_PREFERENCES_UPDATED: {
-            const event = parsed as BaseEvent<UserPreferencesUpdatedPayload>;
-            await matchingService.upsertPreferences(event.payload);
-            console.log(`[matching-service] handled ${topic} for user ${event.payload.userId}`);
-            break;
-          }
+          await matchingService.upsertPreferences({
+            userId: payload.userId,
+            courses: payload.courses?.map((course) => course.name) ?? [],
+            topics: payload.topics?.map((topic) => topic.name) ?? [],
+            studyPace: payload.studyPace ?? null,
+            studyMode: payload.studyMode ?? null,
+            groupSize:
+              payload.groupSize && !Number.isNaN(Number(payload.groupSize))
+                ? Number(payload.groupSize)
+                : null,
+            studyStyle: payload.studyStyles?.[0] ?? null
+          });
 
-          case TOPICS.AVAILABILITY_UPDATED: {
-            const event = parsed as BaseEvent<AvailabilityUpdatedPayload>;
-            await matchingService.replaceAvailability(event.payload);
-            console.log(`[matching-service] handled ${topic} for user ${event.payload.userId}`);
-            break;
-          }
-
-          default:
-            console.warn(`[matching-service] unhandled topic ${topic}`);
+          console.log(
+            `[matching-service] handled ${topic} for user ${payload.userId}`
+          );
+          return;
         }
+
+        if (topic === TOPICS.AVAILABILITY_UPDATED) {
+          const event = parsed as BaseEvent<AvailabilityUpdatedPayload>;
+          const payload = event.payload;
+
+          if (payload.action === "DELETED") {
+            await matchingService.replaceAvailability({
+              userId: payload.userId,
+              availability: []
+            });
+          } else if (payload.slot) {
+            await matchingService.replaceAvailability({
+              userId: payload.userId,
+              availability: [
+                {
+                  dayOfWeek: mapDayOfWeek(payload.slot.dayOfWeek),
+                  startTime: payload.slot.startTime,
+                  endTime: payload.slot.endTime
+                }
+              ]
+            });
+          }
+
+          console.log(
+            `[matching-service] handled ${topic} for user ${payload.userId}`
+          );
+          return;
+        }
+
+        console.warn(`[matching-service] unhandled topic ${topic}`);
       } catch (error) {
         console.error("[matching-service] consumer error:", error);
       }

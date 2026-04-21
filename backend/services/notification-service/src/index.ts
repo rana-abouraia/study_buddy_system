@@ -21,7 +21,9 @@ export interface Context {
   userId: string | null;
 }
 
-const getUserIdFromRequest = (req: { headers: Record<string, string | string[] | undefined> }) => {
+const getUserIdFromRequest = (
+  req: { headers: Record<string, string | string[] | undefined> }
+) => {
   const forwardedUserId = req.headers['x-user-id'];
   if (typeof forwardedUserId === 'string' && forwardedUserId.trim()) {
     return forwardedUserId.trim();
@@ -31,7 +33,6 @@ const getUserIdFromRequest = (req: { headers: Record<string, string | string[] |
   if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     const tokenValue = authHeader.replace('Bearer ', '').trim();
 
-    // Lightweight fallback while the gateway team decides how to forward auth.
     if (tokenValue && !tokenValue.includes('.')) {
       return tokenValue;
     }
@@ -41,6 +42,9 @@ const getUserIdFromRequest = (req: { headers: Record<string, string | string[] |
 };
 
 async function main() {
+  await prisma.$connect();
+  console.log('Notification service database connected');
+
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,

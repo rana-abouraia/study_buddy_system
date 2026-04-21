@@ -6,11 +6,54 @@ export interface BaseEvent<TPayload> {
   payload: TPayload;
 }
 
-export interface UserCreatedPayload {
+export interface UserPreferencesUpdatedPayload {
   userId: string;
+  courses?: Array<{
+    id?: string;
+    name: string;
+    code?: string;
+    term?: string | null;
+  }>;
+  topics?: Array<{
+    id?: string;
+    name: string;
+  }>;
+  studyPace?: string | null;
+  studyMode?: string | null;
+  groupSize?: string | null;
+  studyStyles?: string[];
+  preferredTimes?: string[];
+  sessionLength?: string | null;
 }
 
-export interface UserPreferencesUpdatedPayload {
+export interface NormalizedAvailabilitySlot {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface AvailabilityUpdatedPayload {
+  userId: string;
+  action: "ADDED" | "UPDATED" | "DELETED";
+  slot?: {
+    id?: string;
+    userId?: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isRecurring?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  slotId?: string;
+}
+
+export interface ReplaceAvailabilityInput {
+  userId: string;
+  availability: NormalizedAvailabilitySlot[];
+}
+
+export interface UpsertPreferencesInput {
   userId: string;
   courses: string[];
   topics: string[];
@@ -18,17 +61,6 @@ export interface UserPreferencesUpdatedPayload {
   studyMode?: string | null;
   groupSize?: number | null;
   studyStyle?: string | null;
-}
-
-export interface AvailabilitySlotPayload {
-  dayOfWeek: string;
-  startTime: string; // HH:mm
-  endTime: string;   // HH:mm
-}
-
-export interface AvailabilityUpdatedPayload {
-  userId: string;
-  availability: AvailabilitySlotPayload[];
 }
 
 export interface MatchFoundPayload {
