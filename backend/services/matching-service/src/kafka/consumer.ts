@@ -21,7 +21,62 @@ const consumer = kafka.consumer({
   groupId: "matching-service-group"
 });
 
+const TOPIC_LIST = [
+  TOPICS.USER_CREATED,
+  TOPICS.USER_PREFERENCES_UPDATED,
+  TOPICS.AVAILABILITY_UPDATED,
+  TOPICS.MATCH_FOUND
+];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function ensureTopicsExist() {
+  const admin = kafka.admin();
+  await admin.connect();
+
+  try {
+    await admin.createTopics({
+      waitForLeaders: true,
+      topics: TOPIC_LIST.map((topic) => ({
+        topic,
+        numPartitions: 1,
+        replicationFactor: 1
+      }))
+    });
+  } finally {
+    await admin.disconnect();
+  }
+}
+
+async function ensureTopicsWithRetry(retries = 8, delayMs = 2000) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await ensureTopicsExist();
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `[matching-service] topic setup failed (${attempt}/${retries}), retrying...`,
+        error
+      );
+
+      if (attempt < retries) {
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function startConsumer() {
+  await sleep(8000);
+  await ensureTopicsWithRetry();
+
   await consumer.connect();
 
   await consumer.subscribe({ topic: TOPICS.USER_CREATED, fromBeginning: false });

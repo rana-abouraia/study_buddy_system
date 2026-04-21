@@ -23,40 +23,61 @@ services:
 
   user-service:
     build: ./services/user-service
-    env_file: ./services/user-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${USER_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4001
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4001:4001"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   profile-service:
     build: ./services/profile-service
-    env_file: ./services/profile-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${PROFILE_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4002
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4002:4002"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   availability-service:
     build: ./services/availability-service
-    env_file: ./services/availability-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${AVAILABILITY_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4003
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4003:4003"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   matching-service:
     build: ./services/matching-service
-    env_file: ./services/matching-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${MATCHING_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+      PORT: 4004
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4004:4004"
     depends_on:
@@ -67,40 +88,58 @@ services:
 
   session-service:
     build: ./services/session-service
-    env_file: ./services/session-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${SESSION_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4005
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4005:4005"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   notification-service:
     build: ./services/notification-service
-    env_file: ./services/notification-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${NOTIFICATION_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4006
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4006:4006"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   messaging-service:
     build: ./services/messaging-service
-    env_file: ./services/messaging-service/.env
+    env_file: .env
+    environment:
+      DATABASE_URL: ${MESSAGING_DATABASE_URL}
+      KAFKA_BROKER: kafka:9092
+      PORT: 4007
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4007:4007"
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
     restart: on-failure
 
   api-gateway:
     build: ./api-gateway
-    env_file: ./api-gateway/.env
+    env_file: .env
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "4000:4000"
     depends_on:
