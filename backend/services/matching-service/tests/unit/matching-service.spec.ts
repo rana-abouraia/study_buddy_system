@@ -282,6 +282,7 @@ describe('MatchingService', () => {
     expect(mockPublishMatchFoundEvent).toHaveBeenCalledWith({
       userId: 'A',
       matchedUserId: 'B',
+      userIds: ['A'],
       compatibilityScore: 45,
       reasons: ['Shared courses', 'Overlapping availability']
     });

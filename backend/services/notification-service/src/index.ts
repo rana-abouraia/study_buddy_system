@@ -1,16 +1,20 @@
+import path from 'path';
 import dotenv from 'dotenv';
+
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import jwt from 'jsonwebtoken';
 import { resolvers } from './schema/resolvers';
 import { typeDefs } from './schema/type-defs';
 import { startNotificationConsumer } from './kafka/consumer';
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is missing. Check backend/services/notification-service/.env');
+  throw new Error('DATABASE_URL is missing. Check backend/.env');
 }
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -20,6 +24,8 @@ export interface Context {
   prisma: PrismaClient;
   userId: string | null;
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
 const getUserIdFromRequest = (req: { headers: Record<string, string | string[] | undefined> }) => {
   const forwardedUserId = req.headers['x-user-id'];
@@ -31,9 +37,17 @@ const getUserIdFromRequest = (req: { headers: Record<string, string | string[] |
   if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     const tokenValue = authHeader.replace('Bearer ', '').trim();
 
-    // Lightweight fallback while the gateway team decides how to forward auth.
     if (tokenValue && !tokenValue.includes('.')) {
       return tokenValue;
+    }
+
+    if (tokenValue) {
+      try {
+        const decoded = jwt.verify(tokenValue, JWT_SECRET) as { userId?: string };
+        return decoded.userId ?? null;
+      } catch {
+        return null;
+      }
     }
   }
 

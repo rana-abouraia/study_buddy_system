@@ -3,7 +3,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolvers = void 0;
 const index_1 = require("../index");
 const producer_1 = require("../kafka/producer");
+const DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 const isValidTime = (time) => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+const publishAvailabilityUpdated = async (userId) => {
+    const slots = await index_1.prisma.availabilitySlot.findMany({
+        where: { userId },
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    });
+    await (0, producer_1.publishEvent)('availability.updated', {
+        userId,
+        availability: slots.map((slot) => ({
+            dayOfWeek: DAY_NAMES[slot.dayOfWeek] ?? String(slot.dayOfWeek),
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+        })),
+    });
+};
 exports.resolvers = {
     Query: {
         getMyAvailability: async (_, __, { userId }) => {
@@ -11,13 +26,13 @@ exports.resolvers = {
                 throw new Error('Not authenticated');
             return await index_1.prisma.availabilitySlot.findMany({
                 where: { userId },
-                orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
+                orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
             });
         },
         getUserAvailability: async (_, { userId }) => {
             return await index_1.prisma.availabilitySlot.findMany({
                 where: { userId },
-                orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
+                orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
             });
         }
     },
@@ -25,8 +40,9 @@ exports.resolvers = {
         addAvailabilitySlot: async (_, args, { userId }) => {
             if (!userId)
                 throw new Error('Not authenticated');
-            if (args.dayOfWeek < 0 || args.dayOfWeek > 6)
+            if (args.dayOfWeek < 0 || args.dayOfWeek > 6) {
                 throw new Error('Day of week must be between 0 (Sunday) and 6 (Saturday)');
+            }
             if (!isValidTime(args.startTime))
                 throw new Error('Invalid start time format. Use HH:MM');
             if (!isValidTime(args.endTime))
@@ -50,11 +66,7 @@ exports.resolvers = {
                     isRecurring: args.isRecurring ?? true
                 }
             });
-            await (0, producer_1.publishEvent)('availability-updated', {
-                userId,
-                action: 'ADDED',
-                slot
-            });
+            await publishAvailabilityUpdated(userId);
             return slot;
         },
         updateAvailabilitySlot: async (_, args, { userId }) => {
@@ -78,8 +90,8 @@ exports.resolvers = {
             const existingSlots = await index_1.prisma.availabilitySlot.findMany({
                 where: { userId, dayOfWeek: slot.dayOfWeek, NOT: { id: args.id } }
             });
-            const hasOverlap = existingSlots.some((s) => {
-                return newStart < s.endTime && newEnd > s.startTime;
+            const hasOverlap = existingSlots.some((candidate) => {
+                return newStart < candidate.endTime && newEnd > candidate.startTime;
             });
             if (hasOverlap)
                 throw new Error('Overlapping availability slot exists');
@@ -91,11 +103,7 @@ exports.resolvers = {
                     ...(args.isRecurring !== undefined && { isRecurring: args.isRecurring })
                 }
             });
-            await (0, producer_1.publishEvent)('availability-updated', {
-                userId,
-                action: 'UPDATED',
-                slot: updated
-            });
+            await publishAvailabilityUpdated(userId);
             return updated;
         },
         deleteAvailabilitySlot: async (_, { id }, { userId }) => {
@@ -109,11 +117,7 @@ exports.resolvers = {
             if (slot.userId !== userId)
                 throw new Error('Not authorized');
             await index_1.prisma.availabilitySlot.delete({ where: { id } });
-            await (0, producer_1.publishEvent)('availability-updated', {
-                userId,
-                action: 'DELETED',
-                slotId: id
-            });
+            await publishAvailabilityUpdated(userId);
             return true;
         }
     }

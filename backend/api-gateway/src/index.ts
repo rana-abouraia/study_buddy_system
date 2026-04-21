@@ -1,5 +1,8 @@
+import path from 'path';
 import dotenv from 'dotenv';
+
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
@@ -21,13 +24,13 @@ async function waitForSubgraph(name: string, url: string, retries = 30, delayMs 
       });
 
       if (response.ok) {
-        console.log(`✅ ${name} is ready at ${url}`);
+        console.log(`${name} is ready at ${url}`);
         return;
       }
 
-      console.log(`⏳ ${name} responded with ${response.status}. Retry ${attempt}/${retries}`);
+      console.log(`${name} responded with ${response.status}. Retry ${attempt}/${retries}`);
     } catch {
-      console.log(`⏳ waiting for ${name} at ${url}... (${attempt}/${retries})`);
+      console.log(`Waiting for ${name} at ${url}... (${attempt}/${retries})`);
     }
 
     await sleep(delayMs);
@@ -38,32 +41,27 @@ async function waitForSubgraph(name: string, url: string, retries = 30, delayMs 
 
 async function startServer() {
   const subgraphConfigs = [
-    { name: 'user',         url: process.env.USER_SERVICE_URL! },
-    { name: 'profile',      url: process.env.PROFILE_SERVICE_URL! },
-    { name: 'availability', url: process.env.AVAILABILITY_SERVICE_URL! },
-    { name: 'matching',     url: process.env.MATCHING_SERVICE_URL! },
-    { name: 'session',      url: process.env.SESSION_SERVICE_URL! },
-    { name: 'notification', url: process.env.NOTIFICATION_SERVICE_URL! },
-    { name: 'messaging',    url: process.env.MESSAGING_SERVICE_URL! }
+    { name: 'user', url: process.env.USER_SERVICE_URL || 'http://localhost:4001' },
+    { name: 'profile', url: process.env.PROFILE_SERVICE_URL || 'http://localhost:4002' },
+    { name: 'availability', url: process.env.AVAILABILITY_SERVICE_URL || 'http://localhost:4003' },
+    { name: 'matching', url: process.env.MATCHING_SERVICE_URL || 'http://localhost:4004' },
+    { name: 'session', url: process.env.SESSION_SERVICE_URL || 'http://localhost:4005' },
+    { name: 'notification', url: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:4006' },
+    { name: 'messaging', url: process.env.MESSAGING_SERVICE_URL || 'http://localhost:4007' }
   ];
 
-  // Wait for all services to be up
-  for (const s of subgraphConfigs) {
-    await waitForSubgraph(s.name, s.url);
+  for (const service of subgraphConfigs) {
+    await waitForSubgraph(service.name, service.url);
   }
 
-  // Build subschemas — separate executors for introspection vs runtime
   const subschemas = await Promise.all(
     subgraphConfigs.map(async ({ url }) => {
-      // Used only at startup to fetch the schema (no auth needed)
       const introspectionExecutor = buildHTTPExecutor({ endpoint: url });
-
-      // Used for every actual request — forwards Authorization header from client
       const executor = buildHTTPExecutor({
         endpoint: url,
         headers: (executorRequest) => ({
           'content-type': 'application/json',
-          'authorization': executorRequest?.context?.headers?.authorization || ''
+          authorization: executorRequest?.context?.headers?.authorization || ''
         })
       });
 
@@ -72,7 +70,6 @@ async function startServer() {
     })
   );
 
-  // Stitch all service schemas into one unified schema
   const schema = stitchSchemas({
     subschemas,
     typeMergingOptions: {
@@ -95,7 +92,7 @@ async function startServer() {
     })
   });
 
-  console.log(`🚀 API Gateway running at ${url}`);
+  console.log(`API Gateway running at ${url}`);
 }
 
 startServer().catch((error) => {

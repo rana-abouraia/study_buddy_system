@@ -87,12 +87,13 @@ export const resolvers = {
         }
       });
 
-      await publishEvent('notification-created', {
-        type: 'NEW_MESSAGE',
-        receiverId,
-        senderId: userId,
+      await publishEvent('message.sent', {
         messageId: message.id,
-        content: content.trim()
+        conversationId: conversation.id,
+        senderId: userId,
+        receiverId,
+        recipientIds: [receiverId],
+        preview: content.trim().slice(0, 140)
       });
 
       return message;

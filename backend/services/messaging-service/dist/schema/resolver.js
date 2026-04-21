@@ -86,12 +86,13 @@ exports.resolvers = {
                     content: content.trim()
                 }
             });
-            await (0, producer_1.publishEvent)('notification-created', {
-                type: 'NEW_MESSAGE',
-                receiverId,
-                senderId: userId,
+            await (0, producer_1.publishEvent)('message.sent', {
                 messageId: message.id,
-                content: content.trim()
+                conversationId: conversation.id,
+                senderId: userId,
+                receiverId,
+                recipientIds: [receiverId],
+                preview: content.trim().slice(0, 140)
             });
             return message;
         }

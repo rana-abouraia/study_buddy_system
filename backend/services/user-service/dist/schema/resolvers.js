@@ -42,9 +42,11 @@ exports.resolvers = {
                     phone: args.phone
                 }
             });
-            await (0, producer_1.publishEvent)('user-preferences-updated', {
+            await (0, producer_1.publishEvent)('user.created', {
                 userId: user.id,
                 email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 university: user.university,
                 academicYear: user.academicYear
             });
@@ -68,11 +70,14 @@ exports.resolvers = {
                 where: { id: userId },
                 data: { ...args }
             });
-            await (0, producer_1.publishEvent)('user-preferences-updated', {
+            await (0, producer_1.publishEvent)('user.updated', {
                 userId: user.id,
                 email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 university: user.university,
-                academicYear: user.academicYear
+                academicYear: user.academicYear,
+                phone: user.phone
             });
             return user;
         }

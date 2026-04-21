@@ -43,9 +43,11 @@ export const resolvers = {
         }
       });
 
-      await publishEvent('user-preferences-updated', {
+      await publishEvent('user.created', {
         userId: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         university: user.university,
         academicYear: user.academicYear
       });
@@ -73,11 +75,14 @@ export const resolvers = {
         data: { ...args }
       });
 
-      await publishEvent('user-preferences-updated', {
+      await publishEvent('user.updated', {
         userId: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         university: user.university,
-        academicYear: user.academicYear
+        academicYear: user.academicYear,
+        phone: user.phone
       });
 
       return user;

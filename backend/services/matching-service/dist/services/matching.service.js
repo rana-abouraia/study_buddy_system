@@ -51,19 +51,21 @@ class MatchingService {
                 topics: []
             }
         });
-        await prisma_js_1.prisma.$transaction([
-            prisma_js_1.prisma.availabilitySlot.deleteMany({
+        await prisma_js_1.prisma.$transaction(async (tx) => {
+            await tx.availabilitySlot.deleteMany({
                 where: { userId: payload.userId }
-            }),
-            prisma_js_1.prisma.availabilitySlot.createMany({
-                data: payload.availability.map((slot) => ({
-                    userId: payload.userId,
-                    dayOfWeek: slot.dayOfWeek,
-                    startTime: slot.startTime,
-                    endTime: slot.endTime
-                }))
-            })
-        ]);
+            });
+            if (payload.availability.length) {
+                await tx.availabilitySlot.createMany({
+                    data: payload.availability.map((slot) => ({
+                        userId: payload.userId,
+                        dayOfWeek: slot.dayOfWeek,
+                        startTime: slot.startTime,
+                        endTime: slot.endTime
+                    }))
+                });
+            }
+        });
         await this.recalculateMatchesForUser(payload.userId);
     }
     async recalculateMatchesForUser(userId) {
@@ -118,6 +120,7 @@ class MatchingService {
             await (0, producer_js_1.publishMatchFoundEvent)({
                 userId,
                 matchedUserId: match.candidateUserId,
+                userIds: [userId],
                 compatibilityScore: match.compatibility,
                 reasons: match.reasons
             });
@@ -127,7 +130,7 @@ class MatchingService {
     async getRecommendedMatches(userId, limit = 10) {
         return prisma_js_1.prisma.matchResult.findMany({
             where: { userId },
-            orderBy: { compatibility: "desc" },
+            orderBy: { compatibility: 'desc' },
             take: limit
         });
     }

@@ -1,5 +1,8 @@
+import path from 'path';
 import dotenv from 'dotenv';
+
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
@@ -42,10 +45,10 @@ async function main() {
       }
 
       return { userId, prisma };
-    }
+    },
   });
 
-  console.log(`🚀 Messaging service ready at: ${url}`);
+  console.log(`Messaging service ready at: ${url}`);
 }
 
 main();

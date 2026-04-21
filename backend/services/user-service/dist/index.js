@@ -4,8 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
+const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
+dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '../../.env') });
 const server_1 = require("@apollo/server");
 const standalone_1 = require("@apollo/server/standalone");
 const type_defs_1 = require("./schema/type-defs");
@@ -37,8 +39,8 @@ async function main() {
                 }
             }
             return { userId, prisma: exports.prisma };
-        }
+        },
     });
-    console.log(`🚀 User service ready at: ${url}`);
+    console.log(`User service ready at: ${url}`);
 }
 main();

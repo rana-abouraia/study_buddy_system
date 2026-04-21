@@ -1,11 +1,11 @@
-import { prisma } from "../db/prisma.js";
-import { calculateCompatibility } from "./scoring.service.js";
-import { publishMatchFoundEvent } from "../kafka/producer.js";
+import { prisma } from '../db/prisma.js';
+import { calculateCompatibility } from './scoring.service.js';
+import { publishMatchFoundEvent } from '../kafka/producer.js';
 import type {
   AvailabilityUpdatedPayload,
   UserCreatedPayload,
   UserPreferencesUpdatedPayload
-} from "../types/events.js";
+} from '../types/events.js';
 
 const MATCH_MIN_SCORE = Number(process.env.MATCH_MIN_SCORE || 20);
 const TOP_MATCH_LIMIT = Number(process.env.TOP_MATCH_LIMIT || 10);
@@ -59,19 +59,22 @@ export class MatchingService {
       }
     });
 
-    await prisma.$transaction([
-      prisma.availabilitySlot.deleteMany({
+    await prisma.$transaction(async (tx) => {
+      await tx.availabilitySlot.deleteMany({
         where: { userId: payload.userId }
-      }),
-      prisma.availabilitySlot.createMany({
-        data: payload.availability.map((slot) => ({
-          userId: payload.userId,
-          dayOfWeek: slot.dayOfWeek,
-          startTime: slot.startTime,
-          endTime: slot.endTime
-        }))
-      })
-    ]);
+      });
+
+      if (payload.availability.length) {
+        await tx.availabilitySlot.createMany({
+          data: payload.availability.map((slot) => ({
+            userId: payload.userId,
+            dayOfWeek: slot.dayOfWeek,
+            startTime: slot.startTime,
+            endTime: slot.endTime
+          }))
+        });
+      }
+    });
 
     await this.recalculateMatchesForUser(payload.userId);
   }
@@ -142,6 +145,7 @@ export class MatchingService {
       await publishMatchFoundEvent({
         userId,
         matchedUserId: match.candidateUserId,
+        userIds: [userId],
         compatibilityScore: match.compatibility,
         reasons: match.reasons
       });
@@ -153,7 +157,7 @@ export class MatchingService {
   async getRecommendedMatches(userId: string, limit = 10) {
     return prisma.matchResult.findMany({
       where: { userId },
-      orderBy: { compatibility: "desc" },
+      orderBy: { compatibility: 'desc' },
       take: limit
     });
   }

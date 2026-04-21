@@ -16,6 +16,17 @@ const normalizeCourse = (course) => ({
 const normalizeTopic = (topic) => ({
     name: topic.name.trim(),
 });
+const parseGroupSize = (value) => {
+    if (!value) {
+        return null;
+    }
+    const matches = value.match(/\d+/g);
+    if (!matches?.length) {
+        return null;
+    }
+    const numbers = matches.map(Number);
+    return Math.round(numbers.reduce((sum, current) => sum + current, 0) / numbers.length);
+};
 const requireUserId = (context) => {
     if (!context.userId) {
         throw new Error('Not authenticated');
@@ -34,24 +45,14 @@ const getProfileOrThrow = async (userId) => {
 };
 const publishProfileUpdated = async (userId) => {
     const profile = await getProfileOrThrow(userId);
-    await (0, producer_1.publishEvent)('user-preferences-updated', {
+    await (0, producer_1.publishEvent)('profile.preferences.updated', {
         userId: profile.userId,
         studyPace: profile.studyPace,
         studyMode: profile.studyMode,
-        groupSize: profile.groupSize,
-        studyStyles: profile.studyStyles,
-        preferredTimes: profile.preferredTimes,
-        sessionLength: profile.sessionLength,
-        courses: profile.courses.map((course) => ({
-            id: course.id,
-            name: course.name,
-            code: course.code,
-            term: course.term,
-        })),
-        topics: profile.topics.map((topic) => ({
-            id: topic.id,
-            name: topic.name,
-        })),
+        groupSize: parseGroupSize(profile.groupSize),
+        studyStyle: profile.studyStyles[0] ?? null,
+        courses: profile.courses.map((course) => course.code),
+        topics: profile.topics.map((topic) => topic.name),
     });
     return profile;
 };

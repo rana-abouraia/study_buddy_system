@@ -4,14 +4,11 @@ import { mapEventToNotifications } from './notification-mapper';
 import { KafkaEventEnvelope } from './types';
 
 const DEFAULT_TOPICS = [
-  'match-found',
-  'buddy-request-received',
-  'buddy-request-accepted',
-  'session-invitation-received',
-  'study-session-invitation',
-  'session-reminder',
-  'study-session-reminder',
-  'session-upcoming',
+  'match.found',
+  'session.created',
+  'session.participant.joined',
+  'session.cancelled',
+  'message.sent',
 ];
 
 const getTopics = () => {
@@ -23,6 +20,11 @@ const getTopics = () => {
   return configuredTopics?.length ? configuredTopics : DEFAULT_TOPICS;
 };
 
+const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || 'kafka:9092')
+  .split(',')
+  .map((broker) => broker.trim())
+  .filter(Boolean);
+
 let consumer: Consumer | null = null;
 let admin: Admin | null = null;
 
@@ -33,7 +35,7 @@ export const startNotificationConsumer = async (prisma: PrismaClient) => {
 
   const kafka = new Kafka({
     clientId: process.env.KAFKA_CLIENT_ID || 'notification-service',
-    brokers: [process.env.KAFKA_BROKER || 'kafka:9092'],
+    brokers,
   });
 
   consumer = kafka.consumer({

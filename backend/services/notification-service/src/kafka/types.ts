@@ -1,9 +1,9 @@
 export interface KafkaEventEnvelope {
-  eventName?: string;
-  timestamp?: string;
-  producerService?: string;
-  correlationId?: string;
-  payload?: Record<string, unknown>;
+  eventName: string;
+  timestamp: string;
+  producerService: string;
+  correlationId: string;
+  payload: Record<string, unknown>;
 }
 
 export interface NotificationDraft {

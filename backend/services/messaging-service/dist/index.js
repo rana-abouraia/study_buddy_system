@@ -4,8 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
+const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
+dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '../../.env') });
 const server_1 = require("@apollo/server");
 const standalone_1 = require("@apollo/server/standalone");
 const type_defs_1 = require("./schema/type-defs");
@@ -15,7 +17,7 @@ const adapter_pg_1 = require("@prisma/adapter-pg");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const adapter = new adapter_pg_1.PrismaPg({ connectionString: process.env.DATABASE_URL });
 exports.prisma = new client_1.PrismaClient({ adapter });
-const JWT_SECRET = process.env.JWT_SECRET_USER || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || '123456';
 async function main() {
     const server = new server_1.ApolloServer({
         typeDefs: type_defs_1.typeDefs,
@@ -37,8 +39,8 @@ async function main() {
                 }
             }
             return { userId, prisma: exports.prisma };
-        }
+        },
     });
-    console.log(`🚀 Messaging service ready at: ${url}`);
+    console.log(`Messaging service ready at: ${url}`);
 }
 main();

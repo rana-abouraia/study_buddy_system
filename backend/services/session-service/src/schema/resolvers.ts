@@ -3,18 +3,26 @@ import { Context } from '../index';
 import { publishEvent } from '../kafka/producer';
 
 const VALID_SESSION_TYPES = ['ONLINE', 'IN_PERSON'];
-const VALID_STATUSES = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'];
 
-// Helper to format dates
 const formatSession = (session: any) => ({
   ...session,
   date: session.date.toISOString(),
   createdAt: session.createdAt.toISOString(),
   updatedAt: session.updatedAt.toISOString(),
-  participants: session.participants.map((p: any) => ({
-    ...p,
-    joinedAt: p.joinedAt?.toISOString() || null
+  participants: session.participants.map((participant: any) => ({
+    ...participant,
+    joinedAt: participant.joinedAt?.toISOString() || null
   }))
+});
+
+const serializeSessionEvent = (session: any) => ({
+  sessionId: session.id,
+  creatorId: session.creatorId,
+  topic: session.topic,
+  sessionDate: session.date.toISOString(),
+  duration: session.duration,
+  sessionType: session.sessionType,
+  participantIds: session.participants.map((participant: any) => participant.userId),
 });
 
 export const resolvers = {
@@ -29,7 +37,7 @@ export const resolvers = {
 
     getMySessions: async (_: any, __: any, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
-      
+
       const sessions = await prisma.studySession.findMany({
         where: {
           OR: [
@@ -40,7 +48,7 @@ export const resolvers = {
         include: { participants: true },
         orderBy: { date: 'asc' }
       });
-      
+
       return sessions.map(formatSession);
     },
 
@@ -49,7 +57,7 @@ export const resolvers = {
         include: { participants: true },
         orderBy: { date: 'asc' }
       });
-      
+
       return sessions.map(formatSession);
     }
   },
@@ -57,8 +65,7 @@ export const resolvers = {
   Mutation: {
     createSession: async (_: any, args: any, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
-      
-      // Validation
+
       if (!args.topic?.trim()) throw new Error('Topic is required');
       if (!VALID_SESSION_TYPES.includes(args.sessionType)) {
         throw new Error('Session type must be ONLINE or IN_PERSON');
@@ -76,7 +83,6 @@ export const resolvers = {
         throw new Error('Location is required for in-person sessions');
       }
 
-      // Create session with creator as participant
       const session = await prisma.studySession.create({
         data: {
           creatorId: userId,
@@ -90,22 +96,18 @@ export const resolvers = {
           status: 'UPCOMING',
           participants: {
             create: {
-              userId: userId,
+              userId,
               status: 'ACCEPTED',
-              joinedAt: new Date() // FIXED: Set joinedAt for creator
+              joinedAt: new Date()
             }
           }
         },
         include: { participants: true }
       });
 
-      // Publish Kafka event
-      await publishEvent('study-session-created', {
-        sessionId: session.id,
-        creatorId: userId,
-        topic: session.topic,
-        date: session.date,
-        sessionType: session.sessionType
+      await publishEvent('session.created', {
+        ...serializeSessionEvent(session),
+        userIds: [userId]
       });
 
       return formatSession(session);
@@ -124,7 +126,7 @@ export const resolvers = {
       if (session.status === 'COMPLETED') throw new Error('Session has already ended');
       if (session.date < new Date()) throw new Error('Session has already started');
 
-      const alreadyJoined = session.participants.some(p => p.userId === userId);
+      const alreadyJoined = session.participants.some((participant) => participant.userId === userId);
       if (alreadyJoined) throw new Error('Already joined this session');
 
       const participant = await prisma.sessionParticipant.create({
@@ -132,15 +134,14 @@ export const resolvers = {
           sessionId,
           userId,
           status: 'ACCEPTED',
-          joinedAt: new Date() // FIXED: Set joinedAt when joining
+          joinedAt: new Date()
         }
       });
 
-      await publishEvent('study-session-joined', {
-        sessionId,
-        userId,
-        topic: session.topic,
-        creatorId: session.creatorId
+      await publishEvent('session.participant.joined', {
+        ...serializeSessionEvent(session),
+        joiningUserId: userId,
+        recipientIds: [session.creatorId]
       });
 
       return participant;
@@ -155,7 +156,7 @@ export const resolvers = {
 
       if (!session) throw new Error('Session not found');
       if (session.creatorId === userId) {
-        throw new Error('Creator cannot leave — cancel the session instead');
+        throw new Error('Creator cannot leave - cancel the session instead');
       }
 
       const participant = await prisma.sessionParticipant.findFirst({
@@ -175,7 +176,8 @@ export const resolvers = {
       if (!userId) throw new Error('Not authenticated');
 
       const session = await prisma.studySession.findUnique({
-        where: { id: sessionId }
+        where: { id: sessionId },
+        include: { participants: true }
       });
 
       if (!session) throw new Error('Session not found');
@@ -189,6 +191,17 @@ export const resolvers = {
         where: { id: sessionId },
         data: { status: 'CANCELLED' }
       });
+
+      const recipients = session.participants
+        .map((participant) => participant.userId)
+        .filter((participantId) => participantId !== userId);
+
+      if (recipients.length) {
+        await publishEvent('session.cancelled', {
+          ...serializeSessionEvent(session),
+          userIds: recipients
+        });
+      }
 
       return true;
     }

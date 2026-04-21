@@ -4,14 +4,11 @@ exports.startNotificationConsumer = void 0;
 const kafkajs_1 = require("kafkajs");
 const notification_mapper_1 = require("./notification-mapper");
 const DEFAULT_TOPICS = [
-    'match-found',
-    'buddy-request-received',
-    'buddy-request-accepted',
-    'session-invitation-received',
-    'study-session-invitation',
-    'session-reminder',
-    'study-session-reminder',
-    'session-upcoming',
+    'match.found',
+    'session.created',
+    'session.participant.joined',
+    'session.cancelled',
+    'message.sent',
 ];
 const getTopics = () => {
     const configuredTopics = process.env.NOTIFICATION_TOPICS
@@ -20,6 +17,10 @@ const getTopics = () => {
         .filter(Boolean);
     return configuredTopics?.length ? configuredTopics : DEFAULT_TOPICS;
 };
+const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || 'kafka:9092')
+    .split(',')
+    .map((broker) => broker.trim())
+    .filter(Boolean);
 let consumer = null;
 let admin = null;
 const startNotificationConsumer = async (prisma) => {
@@ -28,7 +29,7 @@ const startNotificationConsumer = async (prisma) => {
     }
     const kafka = new kafkajs_1.Kafka({
         clientId: process.env.KAFKA_CLIENT_ID || 'notification-service',
-        brokers: [process.env.KAFKA_BROKER || 'kafka:9092'],
+        brokers,
     });
     consumer = kafka.consumer({
         groupId: process.env.KAFKA_GROUP_ID || 'notification-service-group',

@@ -1,16 +1,21 @@
-import "dotenv/config";
-import { ApolloServer } from "@apollo/server";
-import { startStandaloneServer } from "@apollo/server/standalone";
-import { typeDefs } from "./schema/type-defs.js";
-import { resolvers } from "./schema/resolvers.js";
-import { prisma } from "./db/prisma.js";
-import { connectProducer } from "./kafka/producer.js";
-import { startConsumer } from "./kafka/consumer.js";
+import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
+import { typeDefs } from './schema/type-defs.js';
+import { resolvers } from './schema/resolvers.js';
+import { prisma } from './db/prisma.js';
+import { connectProducer } from './kafka/producer.js';
+import { startConsumer } from './kafka/consumer.js';
 
 async function bootstrap() {
   try {
     await prisma.$connect();
-    console.log("[matching-service] database connected");
+    console.log('[matching-service] database connected');
 
     await connectProducer();
     await startConsumer();
@@ -28,7 +33,7 @@ async function bootstrap() {
 
     console.log(`[matching-service] GraphQL running at ${url}`);
   } catch (error) {
-    console.error("[matching-service] failed to start:", error);
+    console.error('[matching-service] failed to start:', error);
     process.exit(1);
   }
 }

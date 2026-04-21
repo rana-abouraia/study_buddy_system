@@ -4,20 +4,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.prisma = void 0;
+const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
+dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '../../.env') });
 const server_1 = require("@apollo/server");
 const standalone_1 = require("@apollo/server/standalone");
 const client_1 = require("@prisma/client");
 const adapter_pg_1 = require("@prisma/adapter-pg");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const resolvers_1 = require("./schema/resolvers");
 const type_defs_1 = require("./schema/type-defs");
 const consumer_1 = require("./kafka/consumer");
 if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is missing. Check backend/services/notification-service/.env');
+    throw new Error('DATABASE_URL is missing. Check backend/.env');
 }
 const adapter = new adapter_pg_1.PrismaPg({ connectionString: process.env.DATABASE_URL });
 exports.prisma = new client_1.PrismaClient({ adapter });
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 const getUserIdFromRequest = (req) => {
     const forwardedUserId = req.headers['x-user-id'];
     if (typeof forwardedUserId === 'string' && forwardedUserId.trim()) {
@@ -26,9 +30,17 @@ const getUserIdFromRequest = (req) => {
     const authHeader = req.headers.authorization;
     if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
         const tokenValue = authHeader.replace('Bearer ', '').trim();
-        // Lightweight fallback while the gateway team decides how to forward auth.
         if (tokenValue && !tokenValue.includes('.')) {
             return tokenValue;
+        }
+        if (tokenValue) {
+            try {
+                const decoded = jsonwebtoken_1.default.verify(tokenValue, JWT_SECRET);
+                return decoded.userId ?? null;
+            }
+            catch {
+                return null;
+            }
         }
     }
     return null;

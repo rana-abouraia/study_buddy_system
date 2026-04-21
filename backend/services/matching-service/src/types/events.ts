@@ -34,6 +34,7 @@ export interface AvailabilityUpdatedPayload {
 export interface MatchFoundPayload {
   userId: string;
   matchedUserId: string;
+  userIds: string[];
   compatibilityScore: number;
   reasons: string[];
 }

@@ -17,7 +17,7 @@ const type_defs_1 = require("./schema/type-defs");
 const resolvers_1 = require("./schema/resolvers");
 const adapter = new adapter_pg_1.PrismaPg({ connectionString: process.env.DATABASE_URL });
 exports.prisma = new client_1.PrismaClient({ adapter });
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || '123456';
 async function main() {
     const server = new server_1.ApolloServer({
         typeDefs: type_defs_1.typeDefs,

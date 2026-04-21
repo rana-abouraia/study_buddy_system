@@ -1,35 +1,56 @@
+import { randomUUID } from 'crypto';
 import { Kafka } from 'kafkajs';
-import dotenv from 'dotenv';
 
-dotenv.config();
+type KafkaEventEnvelope<TPayload> = {
+  eventName: string;
+  timestamp: string;
+  producerService: string;
+  correlationId: string;
+  payload: TPayload;
+};
+
+const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || 'kafka:9092')
+  .split(',')
+  .map((broker) => broker.trim())
+  .filter(Boolean);
 
 const kafka = new Kafka({
   clientId: 'messaging-service',
-  brokers: [process.env.KAFKA_BROKER || 'kafka:9092']
+  brokers,
 });
 
 const producer = kafka.producer();
+let producerConnected = false;
 
-export const publishEvent = async (topic: string, payload: object) => {
-  try {
+const connectProducer = async () => {
+  if (!producerConnected) {
     await producer.connect();
+    producerConnected = true;
+  }
+};
+
+export const publishEvent = async <TPayload>(
+  topic: string,
+  payload: TPayload,
+  correlationId = randomUUID(),
+) => {
+  const event: KafkaEventEnvelope<TPayload> = {
+    eventName: topic,
+    timestamp: new Date().toISOString(),
+    producerService: 'messaging-service',
+    correlationId,
+    payload,
+  };
+
+  try {
+    await connectProducer();
     await producer.send({
       topic,
-      messages: [
-        {
-          value: JSON.stringify({
-            eventName: topic,
-            timestamp: new Date().toISOString(),
-            producerService: 'messaging-service',
-            correlationId: Math.random().toString(36).substring(7),
-            payload
-          })
-        }
-      ]
+      messages: [{ value: JSON.stringify(event) }],
     });
-    await producer.disconnect();
-    console.log(`📨 Event published to topic: ${topic}`);
+    console.log(`[messaging-service] published ${topic}`);
   } catch (error) {
-    console.error(`❌ Failed to publish event:`, error);
+    console.error(`[messaging-service] failed to publish ${topic}:`, error);
+    throw error;
   }
 };

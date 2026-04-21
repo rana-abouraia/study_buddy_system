@@ -1,29 +1,30 @@
-import { Kafka } from "kafkajs";
-import { TOPICS } from "./topics.js";
-import { matchingService } from "../services/matching.service.js";
+import { Kafka } from 'kafkajs';
+import { TOPICS } from './topics.js';
+import { matchingService } from '../services/matching.service.js';
 import type {
   BaseEvent,
   AvailabilityUpdatedPayload,
   UserCreatedPayload,
   UserPreferencesUpdatedPayload
-} from "../types/events.js";
+} from '../types/events.js';
 
-const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
-  .split(",")
-  .map((b) => b.trim());
+const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || 'kafka:9092')
+  .split(',')
+  .map((broker) => broker.trim())
+  .filter(Boolean);
 
 const kafka = new Kafka({
-  clientId: process.env.KAFKA_CLIENT_ID || "matching-service",
+  clientId: process.env.KAFKA_CLIENT_ID || 'matching-service',
   brokers
 });
 
 const consumer = kafka.consumer({
-  groupId: "matching-service-group"
+  groupId: 'matching-service-group'
 });
 
 const TOPIC_LIST = [
   TOPICS.USER_CREATED,
-  TOPICS.USER_PREFERENCES_UPDATED,
+  TOPICS.PROFILE_PREFERENCES_UPDATED,
   TOPICS.AVAILABILITY_UPDATED,
   TOPICS.MATCH_FOUND
 ];
@@ -78,12 +79,11 @@ export async function startConsumer() {
   await ensureTopicsWithRetry();
 
   await consumer.connect();
-
   await consumer.subscribe({ topic: TOPICS.USER_CREATED, fromBeginning: false });
-  await consumer.subscribe({ topic: TOPICS.USER_PREFERENCES_UPDATED, fromBeginning: false });
+  await consumer.subscribe({ topic: TOPICS.PROFILE_PREFERENCES_UPDATED, fromBeginning: false });
   await consumer.subscribe({ topic: TOPICS.AVAILABILITY_UPDATED, fromBeginning: false });
 
-  console.log("[matching-service] Kafka consumer connected");
+  console.log('[matching-service] Kafka consumer connected');
 
   await consumer.run({
     eachMessage: async ({ topic, message }) => {
@@ -101,7 +101,7 @@ export async function startConsumer() {
             break;
           }
 
-          case TOPICS.USER_PREFERENCES_UPDATED: {
+          case TOPICS.PROFILE_PREFERENCES_UPDATED: {
             const event = parsed as BaseEvent<UserPreferencesUpdatedPayload>;
             await matchingService.upsertPreferences(event.payload);
             console.log(`[matching-service] handled ${topic} for user ${event.payload.userId}`);
@@ -119,7 +119,7 @@ export async function startConsumer() {
             console.warn(`[matching-service] unhandled topic ${topic}`);
         }
       } catch (error) {
-        console.error("[matching-service] consumer error:", error);
+        console.error('[matching-service] consumer error:', error);
       }
     }
   });
