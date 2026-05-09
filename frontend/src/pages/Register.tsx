@@ -62,7 +62,7 @@ export default function Register() {
     {
       onCompleted: (data) => {
         login(data.register.token, data.register.user);
-        navigate('/dashboard');
+        navigate('/onboarding/profile');
       },
       onError: (err) => {
         setErrors({ general: err.message || 'Registration failed. Please try again.' });

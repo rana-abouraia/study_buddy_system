@@ -40,6 +40,20 @@
   flex-wrap: wrap;
 }
 
+.headerActions :global(.btn-outline),
+.headerActions :global(.btn-primary) {
+  background: #0891B2;
+  border-color: #0891B2;
+  color: #ffffff;
+}
+
+.headerActions :global(.btn-outline):hover,
+.headerActions :global(.btn-primary):hover {
+  background: #067D9A;
+  border-color: #067D9A;
+  color: #ffffff;
+}
+
 .topCards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -56,12 +70,12 @@
 }
 
 .cardBlue {
-  background: linear-gradient(135deg, #0891B2 0%, #0C7D9B 100%);
+  background: linear-gradient(135deg, #0891B2 0%, #054859 100%);
   color: #ffffff;
 }
 
 .cardPink {
-  background: linear-gradient(135deg, #be185d 0%, #a21a5d 100%);
+  background: linear-gradient(135deg, #be185d 0%, #7b103c 100%);
   color: #ffffff;
 }
 
@@ -82,7 +96,7 @@
   display: flex;
   gap: 18px;
   align-items: flex-start;
-  background: #ffffff;
+  background: #F6FAFF;
   border: 1px solid #E8E0D0;
   border-radius: 20px;
   padding: 22px 24px;
@@ -93,8 +107,8 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #eef2ff;
-  color: #312e81;
+  background: #D4E7FF;
+  color: #6082EA;
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -103,11 +117,11 @@
 .helpTitle {
   margin-bottom: 8px;
   font-weight: 700;
-  color: #0f172a;
+  color: #6082EA;
 }
 
 .helpText {
-  color: #475569;
+  color: #6082EA;
   line-height: 1.7;
 }
 
@@ -157,9 +171,6 @@
   height: 36px;
   display: grid;
   place-items: center;
-  background: #f8fafc;
-  border: 1px solid #E8E0D0;
-  border-radius: 12px;
 }
 
 .gridTimeLabel {
@@ -172,7 +183,7 @@
   min-height: 44px;
   border: 1px solid #E8E0D0;
   border-radius: 10px;
-  background: #FDFAF6;
+  background: #ffffff;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -195,8 +206,8 @@
 .quickTitle {
   margin-bottom: 16px;
   font-size: 1rem;
-  color: #0F172A;
-  font-weight: 700;
+  color: #000000;
+  font-weight: 900;
 }
 
 .quickButtonRow {
@@ -206,7 +217,11 @@
 }
 
 .quickButton {
-  min-width: 220px;
+  color:#000000;
+  border: #999999 solid 1px;
+  background: #f8fafc;
+  min-height: 100px;
+  min-width: 400px;
 }
 
 .statusMessage {

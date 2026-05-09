@@ -1,41 +1,105 @@
 .nav {
   background: #ffffff;
   padding: 0 5%;
-  height: 64px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #ede9fe;
+  border-bottom: 1px solid #E2E8F0;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 1px 12px rgba(124, 58, 237, 0.06);
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-family: 'Sora', sans-serif;
   font-weight: 700;
-  font-size: 18px;
-  color: #5b21b6;
+  font-size: 20px;
+  color: #0F172A;
   text-decoration: none;
 }
 
-.logoIcon {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, #7c3aed, #e879a0);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.logoImage {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
+}
+
+/* LOG IN button - blue outline */
+.loginBtn {
+  color: #0891B2;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 40px;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.loginBtn:hover {
+  background: rgba(8, 145, 178, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Sign Up button - pink gradient */
+.signupBtn {
+  background: linear-gradient(135deg, #BE185D, #0891B2);
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 40px;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.signupBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(190, 24, 93, 0.3);
+}
+
+/* Dashboard button - for authenticated users */
+.dashboardBtn {
+  color: #0891B2;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 40px;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.dashboardBtn:hover {
+  background: rgba(8, 145, 178, 0.08);
+  color: #0891B2;
+}
+
+/* Log Out button */
+.logoutBtn {
+  background: transparent;
+  color: #BE185D;
+  border: 1.5px solid #BE185D;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logoutBtn:hover {
+  background: rgba(190, 24, 93, 0.08);
+  transform: translateY(-1px);
 }

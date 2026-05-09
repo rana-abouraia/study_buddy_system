@@ -1,5 +1,17 @@
 import { gql } from '@apollo/client';
 
+ 
+export const MARK_NOTIFICATION_AS_READ = gql`
+  mutation MarkNotificationAsRead($id: String!) {
+    markNotificationAsRead(id: $id) {
+      id
+      isRead
+      readAt
+    }
+  }
+`;
+ 
+
 const USER_FIELDS = gql`
   fragment UserFields on User {
     id
@@ -58,4 +70,91 @@ export const GET_ME = gql`
     }
   }
   ${USER_FIELDS}
+`;
+
+export const SEND_BUDDY_REQUEST = gql`
+  mutation SendBuddyRequest($receiverId: String!) {
+    sendBuddyRequest(receiverId: $receiverId) {
+      id
+      senderId
+      receiverId
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const ACCEPT_BUDDY_REQUEST = gql`
+  mutation AcceptBuddyRequest($requestId: String!) {
+    acceptBuddyRequest(requestId: $requestId) {
+      id
+      senderId
+      receiverId
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const REJECT_BUDDY_REQUEST = gql`
+  mutation RejectBuddyRequest($requestId: String!) {
+    rejectBuddyRequest(requestId: $requestId) {
+      id
+      senderId
+      receiverId
+      status
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const CREATE_STUDY_SESSION = gql`
+  mutation CreateStudySession(
+    $topic: String!
+    $description: String
+    $date: String!
+    $duration: Int!
+    $sessionType: String!
+    $location: String
+    $meetingLink: String
+    $participantIds: [ID!]
+  ) {
+    createSession(
+      topic: $topic
+      description: $description
+      date: $date
+      duration: $duration
+      sessionType: $sessionType
+      location: $location
+      meetingLink: $meetingLink
+      participantIds: $participantIds
+    ) {
+      id
+      topic
+      date
+      duration
+      sessionType
+      status
+      participants {
+        id
+        userId
+        status
+      }
+    }
+  }
+`;
+
+export const SEND_MESSAGE = gql`
+  mutation SendMessage($receiverId: ID!, $content: String!) {
+    sendMessage(receiverId: $receiverId, content: $content) {
+      id
+      conversationId
+      senderId
+      content
+      createdAt
+    }
+  }
 `;

@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@apollo/client';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   GET_MY_AVAILABILITY,
@@ -23,7 +22,6 @@ const formatHourLabel = (hour: number) => {
 
 export default function Availability() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const { data, loading, error, refetch } = useQuery(GET_MY_AVAILABILITY, {
     fetchPolicy: 'cache-and-network',
@@ -147,7 +145,7 @@ export default function Availability() {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          <p className={styles.pageTag}>Availability management</p>
+          
           <h1>Manage Availability</h1>
           <p className={styles.pageDescription}>
             Select the time slots when you're available for study sessions.

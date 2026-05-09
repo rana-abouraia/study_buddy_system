@@ -1,27 +1,143 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useQuery, gql } from '@apollo/client';
 import logo from '../../assets/images/logo.png';
 import styles from './DashboardLayout.module.css';
 
+// Custom SVG icon components - all black, no background
+const DashboardIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+  </svg>
+);
+
+const FindBuddiesIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const ConnectionsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+    <path d="M17 3.5a4 4 0 0 1 0 7" />
+  </svg>
+);
+
+const StudySessionsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <path d="M8 14h.01" />
+    <path d="M12 14h.01" />
+  < path d="M16 14h.01" />
+    <path d="M8 18h.01" />
+    <path d="M12 18h.01" />
+    <path d="M16 18h.01" />
+  </svg>
+);
+
+const AvailabilityIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+const NotificationsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+const MessagesIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const ProfileIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const BellIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+const LogoutIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: '🏠' },
-  { to: '/find-buddies', label: 'Find Buddies', icon: '🔍' },
-  { to: '/my-connections', label: 'My Connections', icon: '👥' },
-  { to: '/study-sessions', label: 'Study Sessions', icon: '📅' },
-  { to: '/availability', label: 'Availability', icon: '⏰' },
-  { to: '/notifications', label: 'Notifications', icon: '🔔' },
-  { to: '/messages', label: 'Messages', icon: '💬' },
-  { to: '/profile', label: 'Profile', icon: '🙍' },
+  { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
+  { to: '/find-buddies', label: 'Find Buddies', icon: FindBuddiesIcon },
+  { to: '/my-connections', label: 'My Connections', icon: ConnectionsIcon },
+  { to: '/study-sessions', label: 'Study Sessions', icon: StudySessionsIcon },
+  { to: '/availability', label: 'Availability', icon: AvailabilityIcon },
+  { to: '/notifications', label: 'Notifications', icon: NotificationsIcon },
+  { to: '/messages', label: 'Messages', icon: MessagesIcon },
+  { to: '/profile', label: 'Profile', icon: ProfileIcon },
 ];
+
+// GraphQL query to get unread notification count
+const GET_UNREAD_COUNT = gql`
+  query GetUnreadNotificationCount {
+    getUnreadNotificationCount
+  }
+`;
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase();
+  const isMessagesPage = location.pathname === '/messages';
+
+  // Fetch unread notification count
+  const { data: notifData, refetch: refetchNotifCount } = useQuery(GET_UNREAD_COUNT, {
+    fetchPolicy: 'network-only',
+    pollInterval: 30000,
+  });
+
+  const unreadCount = notifData?.getUnreadNotificationCount || 0;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleNotificationClick = () => {
+    navigate('/notifications');
+    setTimeout(() => {
+      refetchNotifCount();
+    }, 1000);
   };
 
   return (
@@ -44,54 +160,59 @@ export default function DashboardLayout() {
                 `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
               }
             >
-              <span className={styles.navIcon}>{item.icon}</span>
+              <span className={styles.navIcon}>
+                <item.icon />
+              </span>
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
-
-        <div className={styles.sidebarFooter}>
-          <p className={styles.footerLabel}>Log Out</p>
-          <div
-            className={styles.profileSummary}
-            role="button"
-            tabIndex={0}
-            onClick={handleLogout}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                handleLogout();
-              }
-            }}
-          >
-            <div className={styles.profileAvatar}>{initials || '??'}</div>
-            <div>
-              <p className={styles.profileName}>{user?.firstName} {user?.lastName}</p>
-              <p className={styles.profileDetail}>{user?.email}</p>
-            </div>
-          </div>
-        </div>
       </aside>
 
-      <main className={styles.mainContent}>
-        <div className={styles.topBar}>
-          <div className={styles.searchBar}>
-            <span className={styles.searchIcon}>🔎</span>
-            <input type="search" placeholder="Search study buddies, sessions..." />
-          </div>
-          <div className={styles.topActions}>
-            <button className={styles.notificationButton} type="button">
-              🔔
-            </button>
-            <div className={styles.profileCard}>
-              <div className={styles.avatarCircle}>{initials || '??'}</div>
-              <div>
-                <p className={styles.userName}>{user?.firstName} {user?.lastName}</p>
-                <p className={styles.userEmail}>{user?.email}</p>
-              </div>
+      <main className={`${styles.mainContent} ${isMessagesPage ? styles.messagesMain : ''}`}>
+        {!isMessagesPage ? (
+          <div className={styles.topBar}>
+            <div className={styles.searchBar}>
+              <span className={styles.searchIcon}>
+                <SearchIcon />
+              </span>
+              <input type="search" placeholder="Search study buddies, sessions..." />
+            </div>
+            <div className={styles.topActions}>
+              <button 
+                className={styles.notificationButton} 
+                type="button"
+                onClick={handleNotificationClick}
+              >
+                <BellIcon />
+                {unreadCount > 0 && (
+                  <span className={styles.notificationBadge}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              
+              {/* New Logout Button - styled like the profile card */}
+              <button 
+                className={styles.logoutButton}
+                onClick={handleLogout}
+                type="button"
+              >
+                <div className={styles.logoutAvatar}>
+                  {initials || '??'}
+                </div>
+                <div className={styles.logoutInfo}>
+                  <p className={styles.logoutName}>{user?.firstName} {user?.lastName}</p>
+                  <p className={styles.logoutEmail}>{user?.email}</p>
+                </div>
+                <div className={styles.logoutIcon}>
+                  <LogoutIcon />
+                </div>
+              </button>
             </div>
           </div>
-        </div>
-        <div className={styles.pageBody}>
+        ) : null}
+        <div className={`${styles.pageBody} ${isMessagesPage ? styles.messagesBody : ''}`}>
           <Outlet />
         </div>
       </main>
