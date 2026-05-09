@@ -8,53 +8,50 @@
 
 .container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
+  overflow: hidden;
 }
 
 /* ========== LEFT PANEL ========== */
 .leftPanel {
   flex: 1;
-  background: #EFEFEF;
+  background: #efefef;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px;
-  border-radius: 0 24px 24px 0;
-}
-
-.brainContainer {
-  margin-bottom: 40px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
+  padding: 10px 10px 20px;
 }
 
 .brainImage {
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  max-width: 500px;
-  height: auto;
-  display: block;
   object-fit: contain;
+  object-position: center;
+  display: block;
+  border-radius: 12px;
 }
 
 .welcomeTitle {
   font-family: 'Sora', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: #0F172A;
   text-align: center;
-  margin: 0 0 12px 0;
+  margin: 14px 0 6px;
+  flex-shrink: 0;
 }
 
 .welcomeText {
-  font-size: 16px;
-  color: #64748B;
+  font-size: 14px;
+  color: #000000;
   text-align: center;
-  max-width: 350px;
+  max-width: 320px;
   margin: 0;
   line-height: 1.5;
+  flex-shrink: 0;
 }
 
 /* ========== RIGHT PANEL ========== */
@@ -65,6 +62,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
+  overflow-y: auto;
 }
 
 .formContainer {
@@ -72,7 +70,7 @@
   width: 100%;
 }
 
-/* Logo Section - NO BACKGROUND, BIGGER */
+/* Logo Section */
 .logoLink {
   display: flex;
   align-items: center;
@@ -96,7 +94,6 @@
   object-fit: contain;
 }
 
-/* HiveMind text - Hive bold, Mind normal */
 .logoText {
   font-family: 'Sora', 'Inter', sans-serif;
   font-size: 32px;
@@ -190,7 +187,7 @@
   margin-top: 6px;
 }
 
-/* Forgot password link - #0891B2 */
+/* Forgot password link */
 .forgotRow {
   text-align: right;
   margin-bottom: 24px;
@@ -206,7 +203,7 @@
   text-decoration: underline;
 }
 
-/* Login Button - #BE185D */
+/* Login Button */
 .loginBtn {
   width: 100%;
   height: 48px;
@@ -296,43 +293,45 @@
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
+    height: auto;
+    overflow: auto;
   }
-  
+
   .leftPanel {
-    border-radius: 0 0 24px 24px;
-    padding: 50px 20px;
+    height: 320px;
+    flex: none;
+    padding: 10px 10px 14px;
   }
-  
-  .brainImage {
-    max-width: 280px;
-  }
-  
+
   .welcomeTitle {
-    font-size: 22px;
+    font-size: 18px;
+    margin: 10px 0 4px;
   }
-  
+
   .welcomeText {
-    font-size: 14px;
+    font-size: 13px;
   }
-  
+
   .rightPanel {
+    flex: none;
     padding: 40px 20px;
+    overflow-y: visible;
   }
-  
+
   .formContainer {
     max-width: 100%;
   }
-  
+
   .logoIcon {
     width: 44px;
     height: 44px;
   }
-  
+
   .logoIcon img {
     width: 44px;
     height: 44px;
   }
-  
+
   .logoText {
     font-size: 26px;
   }

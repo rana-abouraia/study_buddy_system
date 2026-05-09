@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, gql } from '@apollo/client';
+import hiveLogo from '../assets/images/logo.png';
 
 /* ── GraphQL ─────────────────────────────────────────────── */
 const UPDATE_PREFERENCES = gql`
@@ -73,8 +74,11 @@ export default function StudyPreferences() {
   return (
     <div style={s.page}>
       <header style={s.header}>
-        <img src="/logo.png" alt="" style={s.logoImg} onError={e => (e.currentTarget.style.display = 'none')} />
-        <span style={s.logoText}><span style={s.logoHive}>Hive</span>Mind</span>
+        <img src={hiveLogo} alt="HiveMind" style={s.logoImg} />
+        <span style={s.logoText}>
+          <span style={s.logoHive}>Hive</span>
+          <span style={s.logoMind}>Mind</span>
+        </span>
       </header>
 
       <main style={s.main}>
@@ -243,12 +247,13 @@ const s: Record<string, React.CSSProperties> = {
   page:           { minHeight: '100vh', background: '#fafafa', fontFamily: "'Nunito','Segoe UI',sans-serif", color: '#1a1a2e' },
   header:         { display: 'flex', alignItems: 'center', gap: 10, padding: '18px 40px', borderBottom: '1px solid #f0eef8', background: '#fff' },
   logoImg:        { width: 36, height: 36, objectFit: 'contain' },
-  logoText:       { fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' },
-  logoHive:       { color: '#e84393' },
+  logoText:       { fontSize: 20, letterSpacing: '-0.3px' },
+  logoHive:       { fontWeight: 800, color: '#1a1a2e' },
+  logoMind:       { fontWeight: 400, color: '#1a1a2e' },
   main:           { maxWidth: 820, margin: '0 auto', padding: '40px 24px 60px' },
   title:          { fontSize: 30, fontWeight: 800, margin: '0 0 8px' },
   progressBar:    { height: 4, background: '#e9e4fc', borderRadius: 4, marginBottom: 12, overflow: 'hidden' },
-  progressFill:   { height: '100%', background: 'linear-gradient(90deg,#e84393,#7c3aed)', borderRadius: 4 },
+  progressFill:   { height: '100%', background: '#0891B2', borderRadius: 4 },
   subtitle:       { color: '#666', marginBottom: 28, fontSize: 14 },
   errorBanner:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 13 },
   errorClose:     { background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: 18, fontWeight: 700 },
@@ -258,41 +263,37 @@ const s: Record<string, React.CSSProperties> = {
   sectionIcon:    { width: 36, height: 36, background: 'linear-gradient(135deg,#fdf2f8,#f3e8ff)', border: '1px solid #fce7f3', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
   sectionTitle:   { fontWeight: 700, fontSize: 15 },
   sectionSub:     { fontSize: 12, color: '#888', marginTop: 2 },
-  requiredStar:   { color: '#e84393' },
+  requiredStar:   { color: '#be185d' },
 
   grid3:          { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 },
   grid2:          { display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 },
   grid4:          { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 },
 
-  // Single-select option
   optCard:        { border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '18px 14px', background: '#fafafa', cursor: 'pointer', textAlign: 'center', transition: 'all .2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 },
-  optCardSel:     { border: '1.5px solid #e84393', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(232,67,147,.1)' },
+  optCardSel:     { border: '1.5px solid #be185d', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(190,24,93,.1)' },
   optEmoji:       { fontSize: 32, marginBottom: 4 },
   optLabel:       { fontWeight: 700, fontSize: 14, color: '#1a1a2e' },
   optDesc:        { fontSize: 12, color: '#888', lineHeight: 1.4 },
 
-  // Multi-select style
   styleCard:      { display: 'flex', alignItems: 'center', gap: 12, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', background: '#fafafa', cursor: 'pointer', textAlign: 'left', transition: 'all .2s', position: 'relative' },
-  styleCardSel:   { border: '1.5px solid #e84393', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(232,67,147,.1)' },
+  styleCardSel:   { border: '1.5px solid #be185d', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(190,24,93,.1)' },
   styleEmoji:     { fontSize: 22, flexShrink: 0 },
   styleInfo:      { flex: 1 },
   styleLabel:     { fontWeight: 700, fontSize: 13, color: '#1a1a2e' },
   styleDesc:      { fontSize: 12, color: '#888', marginTop: 2 },
 
-  // Time card
   timeCard:       { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '16px 10px', background: '#fafafa', cursor: 'pointer', transition: 'all .2s', position: 'relative' },
-  timeCardSel:    { border: '1.5px solid #e84393', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(232,67,147,.1)' },
+  timeCardSel:    { border: '1.5px solid #be185d', background: '#fdf2f8', boxShadow: '0 0 0 3px rgba(190,24,93,.1)' },
   timeEmoji:      { fontSize: 26 },
   timeLabel:      { fontWeight: 700, fontSize: 13, color: '#1a1a2e' },
   timeSub:        { fontSize: 11, color: '#94a3b8' },
-  checkmark:      { position: 'absolute', top: 8, right: 10, fontSize: 12, color: '#e84393', fontWeight: 800 },
+  checkmark:      { position: 'absolute', top: 8, right: 10, fontSize: 12, color: '#be185d', fontWeight: 800 },
 
-  // Session length
-  lengthBtn:      { padding: '12px 8px', border: '1.5px solid #e5e7eb', borderRadius: 10, background: '#fafafa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#555', transition: 'all .2s' },
-  lengthBtnSelected: { border: '1.5px solid #e84393', background: '#fdf2f8', color: '#be185d', boxShadow: '0 0 0 3px rgba(232,67,147,.1)' },
+  lengthBtn:         { padding: '12px 8px', border: '1.5px solid #e5e7eb', borderRadius: 10, background: '#fafafa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#555', transition: 'all .2s' },
+  lengthBtnSelected: { border: '1.5px solid #be185d', background: '#fdf2f8', color: '#be185d', boxShadow: '0 0 0 3px rgba(190,24,93,.1)' },
 
   actions:        { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 24, borderTop: '1px solid #f0eef8' },
   backBtn:        { padding: '10px 22px', background: 'transparent', border: '1.5px solid #d1d5db', color: '#555', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  saveBtn:        { padding: '10px 28px', background: 'linear-gradient(135deg,#e84393,#c026d3)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,67,147,.35)', transition: 'opacity .2s' },
+  saveBtn:        { padding: '10px 28px', background: '#BE185D', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(190,24,93,.35)', transition: 'opacity .2s' },
   requiredNote:   { fontSize: 12, color: '#94a3b8' },
 };

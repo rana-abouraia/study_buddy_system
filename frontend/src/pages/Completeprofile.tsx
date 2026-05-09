@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, gql } from '@apollo/client';
+import hiveLogo from '../assets/images/logo.png';
 
 /* ── GraphQL ─────────────────────────────────────────────── */
 const ADD_COURSE = gql`
@@ -37,8 +38,6 @@ const REMOVE_TOPIC = gql`
 `;
 
 /* ── Shared course pool ───────────────────────────────────── */
-// Codes are the canonical matching key — normalized to uppercase by the backend.
-// Grow this list from DB queries over time.
 const COURSE_POOL: { name: string; code: string }[] = [
   { name: 'Calculus I',                  code: 'MATH101' },
   { name: 'Calculus II',                 code: 'MATH102' },
@@ -145,8 +144,11 @@ export default function CompleteProfile() {
   return (
     <div style={s.page}>
       <header style={s.header}>
-        <img src="/logo.png" alt="" style={s.logoImg} onError={e => (e.currentTarget.style.display = 'none')} />
-        <span style={s.logoText}><span style={s.logoHive}>Hive</span>Mind</span>
+        <img src={hiveLogo} alt="HiveMind" style={s.logoImg} />
+        <span style={s.logoText}>
+          <span style={s.logoHive}>Hive</span>
+          <span style={s.logoMind}>Mind</span>
+        </span>
       </header>
 
       <main style={s.main}>
@@ -431,12 +433,13 @@ const s: Record<string, React.CSSProperties> = {
   page:        { minHeight: '100vh', background: '#fafafa', fontFamily: "'Nunito','Segoe UI',sans-serif", color: '#1a1a2e' },
   header:      { display: 'flex', alignItems: 'center', gap: 10, padding: '18px 40px', borderBottom: '1px solid #f0eef8', background: '#fff' },
   logoImg:     { width: 36, height: 36, objectFit: 'contain' },
-  logoText:    { fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' },
-  logoHive:    { color: '#e84393' },
+  logoText:    { fontSize: 20, letterSpacing: '-0.3px' },
+  logoHive:    { fontWeight: 800, color: '#1a1a2e' },
+  logoMind:    { fontWeight: 400, color: '#1a1a2e' },
   main:        { maxWidth: 900, margin: '0 auto', padding: '40px 24px' },
   title:       { fontSize: 30, fontWeight: 800, margin: '0 0 8px' },
   progressBar: { height: 4, background: '#e9e4fc', borderRadius: 4, marginBottom: 12, overflow: 'hidden' },
-  progressFill:{ height: '100%', background: 'linear-gradient(90deg,#e84393,#7c3aed)', borderRadius: 4, transition: 'width .4s' },
+  progressFill:{ height: '100%', background: '#0891B2', borderRadius: 4, transition: 'width .4s' },
   subtitle:    { color: '#666', marginBottom: 28, fontSize: 14 },
   errorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 13 },
   errorClose:  { background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: 18, fontWeight: 700 },
@@ -456,18 +459,18 @@ const s: Record<string, React.CSSProperties> = {
   dropCode:    { fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '2px 6px', borderRadius: 4, flexShrink: 0 },
   dropName:    { fontSize: 13, color: '#1a1a2e' },
   dropEmpty:   { padding: '10px 14px', color: '#888', fontSize: 13 },
-  dropCustomBtn:{ display: 'block', width: '100%', padding: '10px 14px', background: '#fdf2f8', border: 'none', borderTop: '1px solid #fce7f3', color: '#e84393', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' },
+  dropCustomBtn:{ display: 'block', width: '100%', padding: '10px 14px', background: '#fdf2f8', border: 'none', borderTop: '1px solid #fce7f3', color: '#be185d', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' },
   customForm:  { padding: '14px 14px 10px', borderTop: '1px solid #f5f3ff', background: '#fdfcff' },
   customTitle: { fontWeight: 700, fontSize: 13, color: '#7c3aed', margin: '0 0 10px' },
-  addBtn:      { padding: '8px 16px', background: 'transparent', border: '1.5px solid #e84393', color: '#e84393', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  addBtn:      { padding: '8px 16px', background: 'transparent', border: '1.5px solid #be185d', color: '#be185d', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   cancelBtn:   { padding: '8px 14px', background: 'transparent', border: '1.5px solid #d1d5db', color: '#666', borderRadius: 8, fontSize: 13, cursor: 'pointer' },
   tagList:     { display: 'flex', flexWrap: 'wrap', gap: 8 },
   tag:         { display: 'flex', alignItems: 'center', gap: 6, background: '#fdf2f8', border: '1px solid #fce7f3', color: '#be185d', borderRadius: 20, fontSize: 12, fontWeight: 600, padding: '4px 10px' },
   topicTag:    { display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: 20, fontSize: 12, fontWeight: 600, padding: '4px 10px' },
   tagCode:     { fontFamily: 'monospace', fontSize: 10, background: '#fce7f3', padding: '1px 5px', borderRadius: 4, marginRight: 2 },
-  tagX:        { background: 'none', border: 'none', color: '#e84393', cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1 },
+  tagX:        { background: 'none', border: 'none', color: '#be185d', cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1 },
   hint:        { fontSize: 12, color: '#94a3b8', marginTop: 10, lineHeight: 1.5 },
   actions:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 24, borderTop: '1px solid #f0eef8' },
   skipBtn:     { padding: '10px 22px', background: 'transparent', border: '1.5px solid #d1d5db', color: '#555', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  saveBtn:     { padding: '10px 28px', background: 'linear-gradient(135deg,#e84393,#c026d3)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,67,147,.35)' },
+  saveBtn:     { padding: '10px 28px', background: '#BE185D', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(190,24,93,.35)' },
 };

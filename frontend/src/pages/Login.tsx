@@ -1,4 +1,4 @@
-// src/pages/Login.tsx - Updated logo section
+// src/pages/Login.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
@@ -7,9 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { AuthPayload } from '../types';
 import styles from './Login.module.css';
 
-// Import your images
-import brainImage from '../assets/images/login.png';  // Your HIVE MIND brain image
-import hiveLogo from '../assets/images/logo.png';     // Your small logo icon
+import brainImage from '../assets/images/login.png';
+import hiveLogo from '../assets/images/logo.png';
 
 interface FormState {
   email: string;
@@ -68,21 +67,18 @@ export default function Login() {
 
   return (
     <div className={styles.container}>
-      {/* Left Panel - Light Gray Background with Brain Image and Welcome Text */}
+      {/* Left Panel - image fills available space, text pinned below */}
       <div className={styles.leftPanel}>
-        <div className={styles.brainContainer}>
-          <img src={brainImage} alt="HiveMind Brain" className={styles.brainImage} />
-        </div>
+        <img src={brainImage} alt="HiveMind Brain" className={styles.brainImage} />
         <h2 className={styles.welcomeTitle}>Welcome Back to HiveMind</h2>
         <p className={styles.welcomeText}>
           Connect with your study partners and achieve your academic goals together.
         </p>
       </div>
 
-      {/* Right Panel - White Background with Login Form */}
+      {/* Right Panel */}
       <div className={styles.rightPanel}>
         <div className={styles.formContainer}>
-          {/* Logo and HiveMind text - Hive bold, Mind normal */}
           <Link to="/" className={styles.logoLink}>
             <div className={styles.logoIcon}>
               <img src={hiveLogo} alt="HiveMind" />
@@ -153,7 +149,5 @@ export default function Login() {
 }
 
 function Spinner() {
-  return (
-    <span className={styles.spinner} />
-  );
+  return <span className={styles.spinner} />;
 }

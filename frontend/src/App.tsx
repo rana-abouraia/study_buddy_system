@@ -20,7 +20,7 @@ import Messages         from './pages/Messages';
 import PlaceholderPage  from './pages/PlaceholderPage';
 
 // Onboarding pages (appear once after account creation)
-import CompleteProfile  from './pages/CompleteProfile';
+import CompleteProfile  from './pages/Completeprofile';
 import StudyPreferences from './pages/Studypreferences';
 
 // ─── Protected Route ─────────────────────────────────────
