@@ -25,36 +25,29 @@ export interface Context {
   userId: string | null;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'study-buddy-dev-secret';
 
-const getUserIdFromRequest = (req: { headers: Record<string, string | string[] | undefined> }) => {
-  const forwardedUserId = req.headers['x-user-id'];
-  if (typeof forwardedUserId === 'string' && forwardedUserId.trim()) {
-    return forwardedUserId.trim();
-  }
-
+const getUserIdFromRequest = (
+  req: { headers: Record<string, string | string[] | undefined> }
+) => {
   const authHeader = req.headers.authorization;
-  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-    const tokenValue = authHeader.replace('Bearer ', '').trim();
+  if (typeof authHeader !== 'string') return null;
 
-    if (tokenValue && !tokenValue.includes('.')) {
-      return tokenValue;
-    }
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return null;
 
-    if (tokenValue) {
-      try {
-        const decoded = jwt.verify(tokenValue, JWT_SECRET) as { userId?: string };
-        return decoded.userId ?? null;
-      } catch {
-        return null;
-      }
-    }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    return decoded.userId;
+  } catch {
+    return null;
   }
-
-  return null;
 };
 
 async function main() {
+  await prisma.$connect();
+  console.log('Notification service database connected');
+
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,

@@ -4,11 +4,18 @@ import { mapEventToNotifications } from './notification-mapper';
 import { KafkaEventEnvelope } from './types';
 
 const DEFAULT_TOPICS = [
-  'match.found',
-  'session.created',
-  'session.participant.joined',
-  'session.cancelled',
-  'message.sent',
+  'match-found',
+  'buddy-request-received',
+  'buddy-request-accepted',
+  'session-invitation-received',
+  'study-session-invitation',
+  'session-reminder',
+  'study-session-reminder',
+  'session-upcoming',
+  'study-session-created',
+  'study-session-joined',
+  'study-session-cancelled',
+  'notification-created',
 ];
 
 const getTopics = () => {

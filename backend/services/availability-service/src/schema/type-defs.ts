@@ -11,8 +11,8 @@ export const typeDefs = `#graphql
   }
 
   type Query {
-    getMyAvailability: [AvailabilitySlot]
-    getUserAvailability(userId: String!): [AvailabilitySlot]
+    getMyAvailability: [AvailabilitySlot!]!
+    getUserAvailability(userId: String!): [AvailabilitySlot!]!
   }
 
   type Mutation {

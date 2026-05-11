@@ -4,20 +4,9 @@ exports.matchingService = exports.MatchingService = void 0;
 const prisma_js_1 = require("../db/prisma.js");
 const scoring_service_js_1 = require("./scoring.service.js");
 const producer_js_1 = require("../kafka/producer.js");
-const MATCH_MIN_SCORE = Number(process.env.MATCH_MIN_SCORE || 20);
+const MATCH_MIN_SCORE = Number(process.env.MATCH_MIN_SCORE || 10);
 const TOP_MATCH_LIMIT = Number(process.env.TOP_MATCH_LIMIT || 10);
 class MatchingService {
-    async ensureUserExists(payload) {
-        await prisma_js_1.prisma.matchProfile.upsert({
-            where: { userId: payload.userId },
-            update: {},
-            create: {
-                userId: payload.userId,
-                courses: [],
-                topics: []
-            }
-        });
-    }
     async upsertPreferences(payload) {
         await prisma_js_1.prisma.matchProfile.upsert({
             where: { userId: payload.userId },
@@ -55,7 +44,7 @@ class MatchingService {
             await tx.availabilitySlot.deleteMany({
                 where: { userId: payload.userId }
             });
-            if (payload.availability.length) {
+            if (payload.availability.length > 0) {
                 await tx.availabilitySlot.createMany({
                     data: payload.availability.map((slot) => ({
                         userId: payload.userId,
@@ -68,37 +57,56 @@ class MatchingService {
         });
         await this.recalculateMatchesForUser(payload.userId);
     }
-    async recalculateMatchesForUser(userId) {
-        const user = await prisma_js_1.prisma.matchProfile.findUnique({
+    async loadUserWithAvailability(userId) {
+        return prisma_js_1.prisma.matchProfile.findUnique({
             where: { userId },
             include: { availabilitySlots: true }
         });
-        if (!user) {
-            throw new Error(`User ${userId} not found in matching service`);
-        }
-        const candidates = await prisma_js_1.prisma.matchProfile.findMany({
+    }
+    async loadCandidates(userId) {
+        return prisma_js_1.prisma.matchProfile.findMany({
             where: {
                 userId: { not: userId }
             },
             include: { availabilitySlots: true }
         });
-        await prisma_js_1.prisma.matchResult.deleteMany({
-            where: { userId }
-        });
-        const validMatches = [];
+    }
+    rankCandidates(user, candidates) {
+        const ranked = [];
         for (const candidate of candidates) {
             const result = (0, scoring_service_js_1.calculateCompatibility)(user, candidate);
             if (result.score >= MATCH_MIN_SCORE) {
-                validMatches.push({
+                ranked.push({
                     candidateUserId: candidate.userId,
                     compatibility: result.score,
                     reasons: result.reasons
                 });
             }
         }
-        validMatches.sort((a, b) => b.compatibility - a.compatibility);
-        const topMatches = validMatches.slice(0, TOP_MATCH_LIMIT);
-        for (const match of topMatches) {
+        ranked.sort((a, b) => {
+            if (b.compatibility !== a.compatibility) {
+                return b.compatibility - a.compatibility;
+            }
+            return a.candidateUserId.localeCompare(b.candidateUserId);
+        });
+        return ranked.slice(0, TOP_MATCH_LIMIT);
+    }
+    async recalculateMatchesForUser(userId) {
+        const user = await this.loadUserWithAvailability(userId);
+        if (!user) {
+            throw new Error(`User ${userId} not found in matching service`);
+        }
+        const candidates = await this.loadCandidates(userId);
+        await prisma_js_1.prisma.matchResult.deleteMany({
+            where: {
+                OR: [
+                    { userId },
+                    { candidateUserId: userId }
+                ]
+            }
+        });
+        const rankedMatches = this.rankCandidates(user, candidates);
+        for (const match of rankedMatches) {
             await prisma_js_1.prisma.matchResult.upsert({
                 where: {
                     userId_candidateUserId: {
@@ -117,6 +125,24 @@ class MatchingService {
                     reasons: match.reasons
                 }
             });
+            await prisma_js_1.prisma.matchResult.upsert({
+                where: {
+                    userId_candidateUserId: {
+                        userId: match.candidateUserId,
+                        candidateUserId: userId
+                    }
+                },
+                update: {
+                    compatibility: match.compatibility,
+                    reasons: match.reasons
+                },
+                create: {
+                    userId: match.candidateUserId,
+                    candidateUserId: userId,
+                    compatibility: match.compatibility,
+                    reasons: match.reasons
+                }
+            });
             await (0, producer_js_1.publishMatchFoundEvent)({
                 userId,
                 matchedUserId: match.candidateUserId,
@@ -125,12 +151,15 @@ class MatchingService {
                 reasons: match.reasons
             });
         }
-        return topMatches;
+        return rankedMatches;
     }
     async getRecommendedMatches(userId, limit = 10) {
         return prisma_js_1.prisma.matchResult.findMany({
             where: { userId },
-            orderBy: { compatibility: 'desc' },
+            orderBy: [
+                { compatibility: "desc" },
+                { candidateUserId: "asc" }
+            ],
             take: limit
         });
     }

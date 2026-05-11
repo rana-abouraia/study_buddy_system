@@ -138,7 +138,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    command: sh -c "npx prisma generate && npx prisma migrate deploy --schema=prisma/schema.prisma && npm start"
+    command: sh -c "npx prisma db push && npm start"
     restart: on-failure
 
   messaging-service:

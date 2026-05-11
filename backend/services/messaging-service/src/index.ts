@@ -11,6 +11,7 @@ import { resolvers } from './schema/resolver';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import jwt from 'jsonwebtoken';
+import { startMessagingConsumer } from './kafka/consumer';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 export const prisma = new PrismaClient({ adapter });
@@ -20,7 +21,7 @@ export interface Context {
   prisma: PrismaClient;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || '123456';
+const JWT_SECRET = process.env.JWT_SECRET || 'study-buddy-dev-secret';
 
 async function main() {
   const server = new ApolloServer<Context>({
@@ -48,7 +49,17 @@ async function main() {
     },
   });
 
+<<<<<<< HEAD
   console.log(`Messaging service ready at: ${url}`);
+=======
+  console.log(`🚀 Messaging service ready at: ${url}`);
+
+  try {
+    await startMessagingConsumer(prisma);
+  } catch (error) {
+    console.error('[messaging-service] Failed to start Kafka consumer:', error);
+  }
+>>>>>>> main
 }
 
 main();

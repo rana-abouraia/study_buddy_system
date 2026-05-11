@@ -27,3 +27,15 @@ model Message {
   content        String
   createdAt      DateTime     @default(now())
 }
+
+model Connection {
+  id        String   @id @default(uuid())
+  userA     String
+  userB     String
+  source    String   @default("BUDDY_REQUEST")
+  createdAt DateTime @default(now())
+
+  @@unique([userA, userB])
+  @@index([userA])
+  @@index([userB])
+}
