@@ -1,18 +1,3 @@
-<<<<<<< HEAD
-import path from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config();
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
-
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
-import { typeDefs } from './schema/type-defs.js';
-import { resolvers } from './schema/resolvers.js';
-import { prisma } from './db/prisma.js';
-import { connectProducer } from './kafka/producer.js';
-import { startConsumer } from './kafka/consumer.js';
-=======
 import "dotenv/config";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
@@ -22,7 +7,6 @@ import { resolvers } from "./schema/resolvers.js";
 import { prisma } from "./db/prisma.js";
 import { connectProducer } from "./kafka/producer.js";
 import { startConsumer } from "./kafka/consumer.js";
->>>>>>> main
 
 export interface Context {
   userId: string | null;

@@ -79,8 +79,6 @@ export interface MatchFoundPayload {
   compatibilityScore: number;
   reasons: string[];
 }
-<<<<<<< HEAD
-=======
 
 export interface BuddyRequestReceivedPayload {
   requestId: string;
@@ -95,4 +93,3 @@ export interface BuddyRequestAcceptedPayload {
   accepterId: string;
   recipientId: string;
 }
->>>>>>> main

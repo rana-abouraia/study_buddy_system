@@ -2,16 +2,9 @@ import { prisma } from '../db/prisma.js';
 import { calculateCompatibility } from './scoring.service.js';
 import { publishMatchFoundEvent } from '../kafka/producer.js';
 import type {
-<<<<<<< HEAD
-  AvailabilityUpdatedPayload,
-  UserCreatedPayload,
-  UserPreferencesUpdatedPayload
-} from '../types/events.js';
-=======
   ReplaceAvailabilityInput,
   UpsertPreferencesInput
 } from "../types/events.js";
->>>>>>> main
 
 const MATCH_MIN_SCORE = Number(process.env.MATCH_MIN_SCORE || 10);
 const TOP_MATCH_LIMIT = Number(process.env.TOP_MATCH_LIMIT || 10);
@@ -93,18 +86,6 @@ export class MatchingService {
         where: { userId: payload.userId }
       });
 
-<<<<<<< HEAD
-      if (payload.availability.length) {
-        await tx.availabilitySlot.createMany({
-          data: payload.availability.map((slot) => ({
-            userId: payload.userId,
-            dayOfWeek: slot.dayOfWeek,
-            startTime: slot.startTime,
-            endTime: slot.endTime
-          }))
-        });
-      }
-=======
       type CleanedSlot = {
         userId: string;
         dayOfWeek: number;
@@ -135,7 +116,6 @@ export class MatchingService {
       if (cleanedSlots.length > 0) {
         await tx.availabilitySlot.createMany({ data: cleanedSlots });
       }
->>>>>>> main
     });
 
     await this.recalculateMatchesForUser(payload.userId);
@@ -261,14 +241,10 @@ export class MatchingService {
   async getRecommendedMatches(userId: string, limit = 10) {
     return prisma.matchResult.findMany({
       where: { userId },
-<<<<<<< HEAD
-      orderBy: { compatibility: 'desc' },
-=======
       orderBy: [
         { compatibility: "desc" },
         { candidateUserId: "asc" }
       ],
->>>>>>> main
       take: limit
     });
   }
