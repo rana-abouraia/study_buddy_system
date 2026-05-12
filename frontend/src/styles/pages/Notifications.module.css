@@ -1,0 +1,245 @@
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px;
+}
+
+.header p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.markAllBtn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0891b2;
+  background: transparent;
+  border: 1.5px solid #0891b2;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.markAllBtn:hover { background: #e0f2fe; }
+.markAllBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.listHeader h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.unreadBadge {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.countGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Card ── */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  outline: none;
+}
+
+.card:hover { background: #f9fafb; }
+
+.card:focus-visible { box-shadow: 0 0 0 2px #0891b2; }
+
+/* Unread — light blue tint + teal left accent */
+.cardUnread {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  border-left: 3px solid #0891b2;
+}
+
+.cardUnread:hover { background: #e0f2fe; }
+
+/* ── Icon ── */
+.iconWrap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconWrapGreen  { background: #dcfce7; color: #16a34a; }
+.iconWrapBlue   { background: #dbeafe; color: #2563eb; }
+.iconWrapOrange { background: #ffedd5; color: #ea580c; }
+.iconWrapRed    { background: #fee2e2; color: #dc2626; }
+.iconWrapPurple { background: #ede9fe; color: #7c3aed; }
+.iconWrapGray   { background: #f3f4f6; color: #6b7280; }
+
+/* ── Body ── */
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.unreadDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #0891b2;
+  flex-shrink: 0;
+}
+
+.cardMessage {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.timeAgo {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* ── Empty ── */
+.emptyState {
+  text-align: center;
+  padding: 64px 24px;
+}
+
+.emptyIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: #d1d5db;
+}
+
+.emptyState h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px;
+}
+
+.emptyState p {
+  font-size: 14px;
+  color: #9ca3af;
+  max-width: 340px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.statePanel {
+  padding: 64px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+/* Before */
+.loadMoreBtn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.loadMoreBtn:hover {
+  color: #111827;
+}
+
+/* After */
+.loadMoreBtn {
+  display: block;
+  margin: 24px auto 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0891b2;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.loadMoreBtn:hover {
+  color: #0e7490;
+  text-decoration: underline;
+}
+
+.loadMoreBtn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  text-decoration: none;
+}

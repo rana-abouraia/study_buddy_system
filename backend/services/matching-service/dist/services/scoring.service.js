@@ -13,7 +13,9 @@ function calculateOverlapMinutes(a, b) {
     let total = 0;
     for (const slotA of a) {
         for (const slotB of b) {
-            if (slotA.dayOfWeek.toLowerCase() !== slotB.dayOfWeek.toLowerCase())
+            // dayOfWeek is stored as Int (0 = Sunday … 6 = Saturday) in the
+            // matching-service Prisma schema. Compare directly.
+            if (slotA.dayOfWeek !== slotB.dayOfWeek)
                 continue;
             const start = Math.max(timeToMinutes(slotA.startTime), timeToMinutes(slotB.startTime));
             const end = Math.min(timeToMinutes(slotA.endTime), timeToMinutes(slotB.endTime));

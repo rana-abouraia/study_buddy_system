@@ -3,70 +3,19 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GET_DASHBOARD_DATA, GET_COURSES_AND_TOPICS } from '../graphql/queries';
 import { SEND_BUDDY_REQUEST, MARK_NOTIFICATION_AS_READ } from '../graphql/mutations';
-import { useNavigate } from 'react-router-dom';
-import styles from './Dashboard.module.css';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { CourseItem, DashboardData } from '../types';
+import { countUnreadNotifications, dedupeNotifications, isConnectedMatchNotification, isSelfMatchNotification } from '../utils/notifications';
+import styles from '../styles/pages/Dashboard.module.css';
 
 const DASHBOARD_MATCH_LIMIT = 12;
-
-interface DashboardSessionParticipant {
-  id: string;
-  userId: string;
-  status: string;
-}
-
-interface DashboardSession {
-  id: string;
-  topic: string;
-  date: string;
-  duration: number;
-  sessionType: string;
-  location?: string;
-  meetingLink?: string;
-  status: string;
-  participants: DashboardSessionParticipant[];
-}
-
-interface CourseItem {
-  id: string;
-  name: string;
-}
-
-interface UserSummary {
-  id: string;
-  firstName: string;
-  lastName: string;
-  academicYear?: string;
-}
-
-interface MatchResult {
-  id: string;
-  candidateUserId: string;
-  compatibility: number;
-  reasons: string[];
-}
-
-interface DashboardData {
-  getMySessions: DashboardSession[];
-  myNotifications: Array<{
-    id: string;
-    type: string;
-    title: string;
-    message: string;
-    isRead: boolean;
-    createdAt: string;
-  }>;
-  getRecommendedMatches: MatchResult[];
-  getMyBuddies: string[];
-  meProfile?: {
-    courses: CourseItem[];
-  };
-  getAllUsers: UserSummary[];
-}
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const apolloClient = useApolloClient();
+  const searchTerm = (searchParams.get('search') ?? '').trim().toLowerCase();
 
   const [commonCoursesByCandidate, setCommonCoursesByCandidate] =
     useState<Record<string, string[]>>({});
@@ -80,10 +29,11 @@ export default function Dashboard() {
     GET_DASHBOARD_DATA,
     {
       variables: {
-        notificationLimit: 5,
+        notificationLimit: 20,
         matchLimit: DASHBOARD_MATCH_LIMIT,
       },
-      fetchPolicy: 'cache-and-network',
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-and-network',
     }
   );
 
@@ -94,7 +44,7 @@ export default function Dashboard() {
         {
           query: GET_DASHBOARD_DATA,
           variables: {
-            notificationLimit: 5,
+            notificationLimit: 20,
             matchLimit: DASHBOARD_MATCH_LIMIT,
           },
         },
@@ -105,6 +55,8 @@ export default function Dashboard() {
   const [markNotificationAsRead] = useMutation(MARK_NOTIFICATION_AS_READ, {
     update(cache, { data }) {
       if (!data?.markNotificationAsRead) return;
+
+      // Update the individual notification in cache
       cache.modify({
         id: cache.identify({
           __typename: 'Notification',
@@ -113,6 +65,15 @@ export default function Dashboard() {
         fields: {
           isRead: () => true,
           readAt: () => data.markNotificationAsRead.readAt,
+        },
+      });
+
+      // Decrement the banner count — works for ALL notification types
+      cache.modify({
+        fields: {
+          unreadNotificationsCount(existing = 0) {
+            return Math.max(0, existing - 1);
+          },
         },
       });
     },
@@ -144,22 +105,6 @@ export default function Dashboard() {
           part.charAt(0).toUpperCase() + part.slice(1)
       )
       .join(' ');
-  };
-
-  const formatDate = (value?: string) => {
-    if (!value) return 'Unknown date';
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) return 'Unknown date';
-
-    return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
   };
 
   const formatRelativeTime = (value?: string | number) => {
@@ -298,23 +243,17 @@ export default function Dashboard() {
     );
   }
 
-  const sessions = (data?.getMySessions ?? []).slice(0, 4);
-
-  const notifications = (data?.myNotifications ?? []).slice(0, 5);
-
   const connectedIds = new Set(data?.getMyBuddies ?? []);
-
-  const buddies = (data?.getRecommendedMatches ?? [])
-    .filter(
-      (match) =>
-        match.candidateUserId !== user.id &&
-        !connectedIds.has(match.candidateUserId)
-    )
-    .slice(0, 3);
 
   const usersById = new Map(
     data?.getAllUsers?.map((u) => [u.id, u]) ?? []
   );
+
+  const matchesSearch = (...values: Array<string | undefined | null>) =>
+    !searchTerm ||
+    values.some((value) =>
+      value?.toLowerCase().includes(searchTerm)
+    );
 
   const getBuddyDisplayName = (id: string) => {
     const buddy = usersById.get(id);
@@ -328,9 +267,8 @@ export default function Dashboard() {
     const buddy = usersById.get(id);
 
     if (buddy) {
-      return `${buddy.firstName?.[0] ?? ''}${
-        buddy.lastName?.[0] ?? ''
-      }`.toUpperCase();
+      return `${buddy.firstName?.[0] ?? ''}${buddy.lastName?.[0] ?? ''
+        }`.toUpperCase();
     }
 
     if (!id) return 'SB';
@@ -353,6 +291,53 @@ export default function Dashboard() {
       : 'Study Buddy';
   };
 
+  const now = new Date();
+  const endOfWeek = new Date(now);
+  endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const sessions = (data?.getMySessions ?? [])
+    .filter((session) => {
+      const sessionDate = new Date(session.date);
+      const status = session.status?.toUpperCase?.() ?? '';
+
+      return (
+        sessionDate >= now &&
+        sessionDate <= endOfWeek &&
+        status !== 'COMPLETED' &&
+        status !== 'CANCELLED' &&
+        matchesSearch(session.topic, session.location, session.sessionType)
+      );
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 5);
+
+  const dashboardNotifications = (data?.myNotifications ?? []).filter(
+    (notification) => (
+      !isSelfMatchNotification(notification, user) &&
+      !isConnectedMatchNotification(notification, data?.getMyBuddies ?? [], usersById)
+    )
+  );
+  const notifications = dedupeNotifications(dashboardNotifications).slice(0, 5);
+  const unreadNotificationCount = countUnreadNotifications(
+    dashboardNotifications.map((notification) => ({
+      ...notification,
+      isRead: notification.isRead || readNotificationIds.has(notification.id),
+    }))
+  );
+  const buddies = (data?.getRecommendedMatches ?? [])
+    .filter((match) =>
+      match.candidateUserId !== user.id &&
+      !connectedIds.has(match.candidateUserId) &&
+      matchesSearch(
+        getBuddyDisplayName(match.candidateUserId),
+        getBuddyRole(match.candidateUserId),
+        ...(commonCoursesByCandidate[match.candidateUserId] ?? []),
+        ...match.reasons
+      )
+    )
+    .slice(0, 3);
+
   const handleConnect = async (candidateUserId: string) => {
     setConnectError('');
 
@@ -367,7 +352,7 @@ export default function Dashboard() {
         (previous) =>
           new Set(previous).add(candidateUserId)
       );
-      
+
       await refetch();
     } catch (err) {
       setConnectError(
@@ -379,7 +364,7 @@ export default function Dashboard() {
   };
 
   const handleViewProfile = (matchId: string) => {
-    navigate('/find-buddies', { 
+    navigate('/find-buddies', {
       state: { selectedMatchId: matchId }
     });
   };
@@ -521,30 +506,29 @@ export default function Dashboard() {
             </div>
 
             <div className={styles.sessionList}>
-              {sessions.length > 0 ? (
-                sessions.map((session) => {
+              {sessions.map((session) => {
                   const sessionDate = new Date(session.date);
                   const isToday = sessionDate.toDateString() === new Date().toDateString();
                   const endTime = new Date(sessionDate.getTime() + session.duration * 60000);
-                  
+
                   const timeStr = `${sessionDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - ${endTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-                  
+
                   const otherParticipants = session.participants.filter(p => p.userId !== user?.id);
-                  
+
                   const participantNames = otherParticipants.slice(0, 2).map(p => {
                     const participantUser = usersById.get(p.userId);
                     return participantUser ? `${participantUser.firstName} ${participantUser.lastName}` : 'Someone';
                   }).join(', ');
-                  
+
                   const remainingCount = otherParticipants.length - 2;
                   const participantText = otherParticipants.length > 0
-                    ? remainingCount > 0 
+                    ? remainingCount > 0
                       ? `With ${participantNames}, ${remainingCount} other${remainingCount === 1 ? '' : 's'}`
                       : `With ${participantNames}`
                     : 'No other participants';
-                  
+
                   const isOnline = session.sessionType.toUpperCase() === 'ONLINE';
-                  
+
                   return (
                     <div key={session.id} className={styles.sessionItem}>
                       {isOnline ? (
@@ -555,7 +539,7 @@ export default function Dashboard() {
                           </svg>
                         </div>
                       ) : (
-                        <div className={styles.inpersonIconBadge} style={{ background: '#0891B2' }}>
+                        <div className={styles.inpersonIconBadge} style={{ background: '#BE185D' }}>
                           <svg viewBox="0 0 24 24" className={styles.sessionIcon} style={{ stroke: 'white' }}>
                             <path d="M12 21s-7-6.75-7-11a7 7 0 0 1 14 0c0 4.25-7 11-7 11z" />
                             <circle cx="12" cy="10" r="2.5" />
@@ -580,22 +564,17 @@ export default function Dashboard() {
                       </div>
                     </div>
                   );
-                })
-              ) : (
-                <div className={styles.emptyState}>
-                  No upcoming sessions found.
-                </div>
-              )}
+                })}
             </div>
           </div>
 
           {/* NOTIFICATIONS */}
           <div className={styles.notificationsCard}>
             <div className={styles.cardHeader}>
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h2>Recent Notifications</h2>
-                <p>Stay updated with your activities</p>
               </div>
+
             </div>
 
             <div className={styles.notificationList}>
@@ -637,31 +616,43 @@ export default function Dashboard() {
                     return '/notifications';
                   };
 
-                  const isUnread = !note.isRead && !readNotificationIds.has(note.id);
-
                   return (
                     <button
                       key={note.id}
                       type="button"
-                      onClick={() => {
-                        if (!note.isRead && !readNotificationIds.has(note.id)) {
-                          setReadNotificationIds(
-                            (prev) => new Set(prev).add(note.id)
+                      onClick={async () => {
+                        const isRead = note.isRead || note.duplicateUnreadIds.every((id) => readNotificationIds.has(id));
+
+                        if (!isRead) {
+                          // instant local UI update
+                          setReadNotificationIds((prev) => {
+                            const next = new Set(prev);
+                            note.duplicateUnreadIds.forEach((id) => next.add(id));
+                            return next;
+                          });
+
+                          // backend update
+                          await Promise.all(
+                            note.duplicateUnreadIds.map((id) =>
+                              markNotificationAsRead({
+                                variables: { id },
+                              }).catch(() => null)
+                            )
                           );
-                          markNotificationAsRead({
-                            variables: { id: note.id },
-                          }).catch(() => {});
                         }
+
                         navigate(getNotificationRoute());
                       }}
-                      className={`${styles.notificationItem} ${isUnread ? styles.notificationUnread : ''}`}
+                      className={`${styles.notificationItem} ${
+                        !(note.isRead || note.duplicateUnreadIds.every((id) => readNotificationIds.has(id)))
+                          ? styles.notificationUnread
+                          : styles.notificationRead
+                        }`}
                     >
                       <div className={styles.notificationContent}>
                         <div className={styles.notificationTop}>
-                          {isUnread && (
-                            <span
-                              className={styles.notificationDot}
-                            />
+                          {!(note.isRead || note.duplicateUnreadIds.every((id) => readNotificationIds.has(id))) && (
+                            <span className={styles.notificationDot} />
                           )}
 
                           <p>{notificationText}</p>
@@ -757,8 +748,8 @@ export default function Dashboard() {
                         >
                           {sentBuddyIds.has(buddy.candidateUserId) ? 'Request Sent' : '+ Connect'}
                         </button>
-                        <button 
-                          className="btn-outline" 
+                        <button
+                          className="btn-outline"
                           type="button"
                           onClick={() => handleViewProfile(buddy.id)}
                         >

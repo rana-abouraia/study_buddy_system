@@ -3,10 +3,12 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   GET_MY_AVAILABILITY,
+} from '../graphql/queries';
+import {
   ADD_AVAILABILITY_SLOT,
   DELETE_AVAILABILITY_SLOT,
-} from '../graphql/queries';
-import styles from './Availability.module.css';
+} from '../graphql/mutations';
+import styles from '../styles/pages/Availability.module.css';
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -145,7 +147,7 @@ export default function Availability() {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          
+
           <h1>Manage Availability</h1>
           <p className={styles.pageDescription}>
             Select the time slots when you're available for study sessions.

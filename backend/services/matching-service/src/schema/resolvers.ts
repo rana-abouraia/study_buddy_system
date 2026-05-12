@@ -92,6 +92,15 @@ export const resolvers = {
     ) => {
       const userId = requireAuth(context);
       return buddyService.reject(userId, args.requestId);
+    },
+
+    updateMatchProfile: async (
+      _: unknown,
+      { input }: { input: { studyPace?: string; studyMode?: string; groupSize?: number; studyStyle?: string; preferredTimes?: string[]; sessionLength?: string } },
+      context: Context
+    ) => {
+      const userId = requireAuth(context);
+      return matchingService.updateProfile(userId, input);
     }
   },
 

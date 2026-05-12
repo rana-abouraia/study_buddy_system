@@ -52,6 +52,20 @@ export const resolvers = {
         take: Math.min(limit, 100),
       });
     },
+     unreadNotificationsCount: async (
+    _: unknown,
+    __: unknown,
+    { prisma, userId }: Context,
+  ) => {
+    const currentUserId = requireUser(userId);
+
+    return prisma.notification.count({
+      where: {
+        userId: currentUserId,
+        isRead: false,
+      },
+    });
+  },
   },
 
   Mutation: {
@@ -92,5 +106,6 @@ export const resolvers = {
 
       return { count: result.count };
     },
+    
   },
 };

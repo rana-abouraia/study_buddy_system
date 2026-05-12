@@ -1,4 +1,23 @@
 import { gql } from '@apollo/client';
+export const GET_MY_NOTIFICATIONS = gql`
+  query GetMyNotifications($limit: Int = 20) {
+    myNotifications(limit: $limit) {
+      id
+      type
+      title
+      message
+      isRead
+      createdAt
+    }
+    unreadNotificationsCount
+    getMyBuddies
+    getAllUsers {
+      id
+      firstName
+      lastName
+    }
+  }
+`;
 
 export const GET_DASHBOARD_DATA = gql`
   query DashboardData($notificationLimit: Int = 5, $matchLimit: Int = 5) {
@@ -25,6 +44,7 @@ export const GET_DASHBOARD_DATA = gql`
       isRead
       createdAt
     }
+      unreadNotificationsCount
     getRecommendedMatches(limit: $matchLimit) {
       id
       candidateUserId
@@ -50,7 +70,21 @@ export const GET_DASHBOARD_DATA = gql`
 export const GET_COURSES_AND_TOPICS = gql`
   query GetCoursesAndTopics($userId: ID!) {
     getCoursesAndTopics(userId: $userId) {
+      id
+      userId
+      studyPace
+      studyMode
+      groupSize
+      studyStyles
+      preferredTimes
+      sessionLength
       courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
         id
         name
       }
@@ -59,7 +93,7 @@ export const GET_COURSES_AND_TOPICS = gql`
 `;
 
 export const GET_MATCH_PROFILE = gql`
-  query GetMatchProfile($userId: String) {
+  query GetMatchProfile($userId: String!) {
     getMatchProfile(userId: $userId) {
       userId
       studyPace
@@ -75,6 +109,7 @@ export const GET_MATCH_PROFILE = gql`
     }
   }
 `;
+
 
 export const GET_FIND_BUDDIES_DATA = gql`
   query FindBuddiesData($matchLimit: Int = 12) {
@@ -239,20 +274,3 @@ export const GET_MY_AVAILABILITY = gql`
   }
 `;
 
-export const ADD_AVAILABILITY_SLOT = gql`
-  mutation AddAvailabilitySlot($dayOfWeek: Int!, $startTime: String!, $endTime: String!, $isRecurring: Boolean) {
-    addAvailabilitySlot(dayOfWeek: $dayOfWeek, startTime: $startTime, endTime: $endTime, isRecurring: $isRecurring) {
-      id
-      dayOfWeek
-      startTime
-      endTime
-      isRecurring
-    }
-  }
-`;
-
-export const DELETE_AVAILABILITY_SLOT = gql`
-  mutation DeleteAvailabilitySlot($id: ID!) {
-    deleteAvailabilitySlot(id: $id)
-  }
-`;

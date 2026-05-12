@@ -200,6 +200,114 @@ export const resolvers = {
       return participant;
     },
 
+    updateSession: async (
+      _: any,
+      {
+        sessionId,
+        meetingLink,
+        location,
+        participantIds
+      }: {
+        sessionId: string;
+        meetingLink?: string | null;
+        location?: string | null;
+        participantIds?: string[] | null;
+      },
+      { userId }: Context
+    ) => {
+      if (!userId) throw new Error('Not authenticated');
+
+      const session = await prisma.studySession.findUnique({
+        where: { id: sessionId },
+        include: { participants: true }
+      });
+
+      if (!session) throw new Error('Session not found');
+      if (session.creatorId !== userId) {
+        throw new Error('Only the creator can update this session');
+      }
+      if (session.status === 'CANCELLED') throw new Error('Cannot update a cancelled session');
+      if (computeEffectiveStatus(session) === 'COMPLETED') {
+        throw new Error('Cannot update a completed session');
+      }
+
+      const isOnline = session.sessionType === 'ONLINE';
+      const normalizedMeetingLink = meetingLink?.trim() || null;
+      const normalizedLocation = location?.trim() || null;
+
+      if (isOnline && !normalizedMeetingLink) {
+        throw new Error('Meeting link is required for online sessions');
+      }
+      if (!isOnline && !normalizedLocation) {
+        throw new Error('Location is required for in-person sessions');
+      }
+
+      const requestedParticipantIds = Array.isArray(participantIds) ? participantIds : [];
+      const inviteeIds = Array.from(
+        new Set(requestedParticipantIds.filter((id: string) => id && id !== userId))
+      );
+      const existingByUserId = new Map(session.participants.map((p: any) => [p.userId, p]));
+      const existingCreatorParticipant = existingByUserId.get(userId);
+
+      await prisma.sessionParticipant.deleteMany({
+        where: {
+          sessionId,
+          userId: { not: userId }
+        }
+      });
+
+      if (!existingCreatorParticipant) {
+        await prisma.sessionParticipant.create({
+          data: {
+            sessionId,
+            userId,
+            status: 'ACCEPTED',
+            joinedAt: new Date()
+          }
+        });
+      }
+
+      if (inviteeIds.length > 0) {
+        await prisma.sessionParticipant.createMany({
+          data: inviteeIds.map((inviteeId: string) => ({
+            sessionId,
+            userId: inviteeId,
+            status: existingByUserId.get(inviteeId)?.status === 'ACCEPTED' ? 'ACCEPTED' : 'INVITED',
+            joinedAt: existingByUserId.get(inviteeId)?.status === 'ACCEPTED'
+              ? existingByUserId.get(inviteeId)?.joinedAt
+              : null
+          }))
+        });
+      }
+
+      const updated = await prisma.studySession.update({
+        where: { id: sessionId },
+        data: {
+          meetingLink: isOnline ? normalizedMeetingLink : null,
+          location: isOnline ? null : normalizedLocation
+        },
+        include: { participants: true }
+      });
+
+      const newlyInvitedIds = inviteeIds.filter((inviteeId) => !existingByUserId.has(inviteeId));
+      if (newlyInvitedIds.length > 0) {
+        await Promise.all(
+          newlyInvitedIds.map((inviteeId: string) =>
+            publishEvent('study-session-invitation', {
+              sessionId,
+              inviteeId,
+              inviterId: userId,
+              topic: updated.topic,
+              date: updated.date.toISOString(),
+              sessionType: updated.sessionType
+            })
+          )
+        );
+      }
+
+      return formatSession(updated);
+    },
+
     leaveSession: async (_: any, { sessionId }: { sessionId: string }, { userId }: Context) => {
       if (!userId) throw new Error('Not authenticated');
 

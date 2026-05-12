@@ -1,8 +1,11 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import type { FormEvent } from 'react';
+import { gql, useQuery } from '@apollo/client';
 import { useAuth } from '../../context/AuthContext';
-import { useQuery, gql } from '@apollo/client';
 import logo from '../../assets/images/logo.png';
-import styles from './DashboardLayout.module.css';
+import type { NotificationBadgeData } from '../../types';
+import { countUnreadNotifications, isConnectedMatchNotification, isSelfMatchNotification } from '../../utils/notifications';
+import styles from '../../styles/components/layout/DashboardLayout.module.css';
 
 // Custom SVG icon components - all black, no background
 const DashboardIcon = () => (
@@ -39,7 +42,7 @@ const StudySessionsIcon = () => (
     <line x1="3" y1="10" x2="21" y2="10" />
     <path d="M8 14h.01" />
     <path d="M12 14h.01" />
-  < path d="M16 14h.01" />
+    <path d="M16 14h.01" />
     <path d="M8 18h.01" />
     <path d="M12 18h.01" />
     <path d="M16 18h.01" />
@@ -106,10 +109,23 @@ const navItems = [
   { to: '/profile', label: 'Profile', icon: ProfileIcon },
 ];
 
-// GraphQL query to get unread notification count
-const GET_UNREAD_COUNT = gql`
-  query GetUnreadNotificationCount {
-    getUnreadNotificationCount
+const GET_NOTIFICATION_BADGE = gql`
+  query NotificationBadge {
+    myNotifications(limit: 100) {
+      id
+      type
+      title
+      message
+      isRead
+      createdAt
+    }
+    getMyBuddies
+    getAllUsers {
+      id
+      firstName
+      lastName
+    }
+    unreadNotificationsCount
   }
 `;
 
@@ -120,13 +136,31 @@ export default function DashboardLayout() {
   const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase();
   const isMessagesPage = location.pathname === '/messages';
 
-  // Fetch unread notification count
-  const { data: notifData, refetch: refetchNotifCount } = useQuery(GET_UNREAD_COUNT, {
-    fetchPolicy: 'network-only',
+  const searchParams = new URLSearchParams(location.search);
+  const searchValue = searchParams.get('search') ?? '';
+
+  const { data: notificationBadgeData } = useQuery<NotificationBadgeData>(GET_NOTIFICATION_BADGE, {
+    fetchPolicy: 'cache-and-network',
     pollInterval: 30000,
   });
 
-  const unreadCount = notifData?.getUnreadNotificationCount || 0;
+  const badgeNotifications = notificationBadgeData?.myNotifications ?? [];
+  const badgeUsersById = new Map(
+    (notificationBadgeData?.getAllUsers ?? []).map((badgeUser) => [
+      badgeUser.id,
+      badgeUser,
+    ])
+  );
+  const unreadCount = notificationBadgeData?.myNotifications
+    ? countUnreadNotifications(
+      badgeNotifications.filter(
+        (notification) => (
+          !isSelfMatchNotification(notification, user) &&
+          !isConnectedMatchNotification(notification, notificationBadgeData?.getMyBuddies ?? [], badgeUsersById)
+        )
+      )
+    )
+    : notificationBadgeData?.unreadNotificationsCount ?? 0;
 
   const handleLogout = () => {
     logout();
@@ -135,9 +169,13 @@ export default function DashboardLayout() {
 
   const handleNotificationClick = () => {
     navigate('/notifications');
-    setTimeout(() => {
-      refetchNotifCount();
-    }, 1000);
+  };
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const query = String(formData.get('dashboardSearch') ?? '').trim();
+    navigate(query ? `/dashboard?search=${encodeURIComponent(query)}` : '/dashboard');
   };
 
   return (
@@ -172,15 +210,21 @@ export default function DashboardLayout() {
       <main className={`${styles.mainContent} ${isMessagesPage ? styles.messagesMain : ''}`}>
         {!isMessagesPage ? (
           <div className={styles.topBar}>
-            <div className={styles.searchBar}>
+            <form className={styles.searchBar} onSubmit={handleSearch}>
               <span className={styles.searchIcon}>
                 <SearchIcon />
               </span>
-              <input type="search" placeholder="Search study buddies, sessions..." />
-            </div>
+              <input
+                key={searchValue}
+                name="dashboardSearch"
+                type="search"
+                placeholder="Search study buddies, sessions..."
+                defaultValue={searchValue}
+              />
+            </form>
             <div className={styles.topActions}>
-              <button 
-                className={styles.notificationButton} 
+              <button
+                className={styles.notificationButton}
                 type="button"
                 onClick={handleNotificationClick}
               >
@@ -191,9 +235,8 @@ export default function DashboardLayout() {
                   </span>
                 )}
               </button>
-              
-              {/* New Logout Button - styled like the profile card */}
-              <button 
+
+              <button
                 className={styles.logoutButton}
                 onClick={handleLogout}
                 type="button"

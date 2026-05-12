@@ -4,42 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEND_MESSAGE } from '../graphql/mutations';
 import { GET_CONVERSATION_MESSAGES, GET_MESSAGES_PAGE_DATA } from '../graphql/queries';
-import styles from './Messages.module.css';
-
-interface UserSummary {
-  id: string;
-  email?: string;
-  firstName: string;
-  lastName: string;
-  university?: string;
-  academicYear?: string;
-}
-
-interface MessageItem {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  content: string;
-  createdAt: string;
-}
-
-interface ConversationItem {
-  id: string;
-  participant1: string;
-  participant2: string;
-  updatedAt: string;
-  messages?: MessageItem[];
-}
-
-interface MessagesPageData {
-  getMyConversations: ConversationItem[];
-  getMyBuddies: string[];
-  getAllUsers: UserSummary[];
-}
-
-interface ConversationMessagesData {
-  getMessages: MessageItem[];
-}
+import type { ConversationItem, ConversationMessagesData, MessagesPageData, UserSummary } from '../types';
+import styles from '../styles/pages/Messages.module.css';
 
 const formatName = (user?: UserSummary) => user ? `${user.firstName} ${user.lastName}` : 'Study Buddy';
 

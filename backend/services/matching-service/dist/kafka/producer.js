@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectProducer = connectProducer;
 exports.publishMatchFoundEvent = publishMatchFoundEvent;
+exports.publishBuddyRequestReceived = publishBuddyRequestReceived;
+exports.publishBuddyRequestAccepted = publishBuddyRequestAccepted;
 const crypto_1 = require("crypto");
 const kafkajs_1 = require("kafkajs");
 const topics_js_1 = require("./topics.js");
@@ -31,6 +33,32 @@ async function publishMatchFoundEvent(payload) {
     };
     await producer.send({
         topic: topics_js_1.TOPICS.MATCH_FOUND,
+        messages: [{ value: JSON.stringify(event) }]
+    });
+}
+async function publishBuddyRequestReceived(payload) {
+    const event = {
+        eventName: topics_js_1.TOPICS.BUDDY_REQUEST_RECEIVED,
+        timestamp: new Date().toISOString(),
+        producerService: "matching-service",
+        correlationId: (0, crypto_1.randomUUID)(),
+        payload
+    };
+    await producer.send({
+        topic: topics_js_1.TOPICS.BUDDY_REQUEST_RECEIVED,
+        messages: [{ value: JSON.stringify(event) }]
+    });
+}
+async function publishBuddyRequestAccepted(payload) {
+    const event = {
+        eventName: topics_js_1.TOPICS.BUDDY_REQUEST_ACCEPTED,
+        timestamp: new Date().toISOString(),
+        producerService: "matching-service",
+        correlationId: (0, crypto_1.randomUUID)(),
+        payload
+    };
+    await producer.send({
+        topic: topics_js_1.TOPICS.BUDDY_REQUEST_ACCEPTED,
         messages: [{ value: JSON.stringify(event) }]
     });
 }

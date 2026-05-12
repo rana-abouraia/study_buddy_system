@@ -1,13 +1,18 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const server_1 = require("@apollo/server");
 const standalone_1 = require("@apollo/server/standalone");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const type_defs_js_1 = require("./schema/type-defs.js");
 const resolvers_js_1 = require("./schema/resolvers.js");
 const prisma_js_1 = require("./db/prisma.js");
 const producer_js_1 = require("./kafka/producer.js");
 const consumer_js_1 = require("./kafka/consumer.js");
+const JWT_SECRET = process.env.JWT_SECRET || "study-buddy-dev-secret";
 async function bootstrap() {
     try {
         await prisma_js_1.prisma.$connect();
@@ -20,7 +25,20 @@ async function bootstrap() {
         });
         const port = Number(process.env.PORT || 4004);
         const { url } = await (0, standalone_1.startStandaloneServer)(server, {
-            listen: { port }
+            listen: { port },
+            context: async ({ req }) => {
+                const authHeader = req.headers.authorization || "";
+                const token = authHeader.replace("Bearer ", "").trim();
+                if (!token)
+                    return { userId: null };
+                try {
+                    const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+                    return { userId: decoded.userId };
+                }
+                catch {
+                    return { userId: null };
+                }
+            }
         });
         console.log(`[matching-service] GraphQL running at ${url}`);
     }

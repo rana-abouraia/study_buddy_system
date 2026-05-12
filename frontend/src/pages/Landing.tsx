@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import landingImage from '../assets/images/landing.png';
-import styles from './Landing.module.css';
+import styles from '../styles/pages/Landing.module.css';
 
 export default function Landing() {
   return (

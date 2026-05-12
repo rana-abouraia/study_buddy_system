@@ -39,6 +39,15 @@ export const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  input UpdateMatchProfileInput {
+    studyPace: String
+    studyMode: String
+    groupSize: Int
+    studyStyle: String
+    preferredTimes: [String!]
+    sessionLength: String
+  }
+
   type Query {
     getRecommendedMatches(userId: String, limit: Int): [MatchResult!]!
     getMatchProfile(userId: String): MatchProfile
@@ -52,5 +61,6 @@ export const typeDefs = `#graphql
     sendBuddyRequest(receiverId: String!): BuddyRequest!
     acceptBuddyRequest(requestId: String!): BuddyRequest!
     rejectBuddyRequest(requestId: String!): BuddyRequest!
+    updateMatchProfile(input: UpdateMatchProfileInput!): MatchProfile!
   }
 `;

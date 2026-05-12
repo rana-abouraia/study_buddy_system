@@ -23,6 +23,15 @@ const consumer = kafka.consumer({
 function parseGroupSize(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
+    const normalized = value.trim().toUpperCase();
+    const groupSizeMap: Record<string, number> = {
+      ONE_ON_ONE: 2,
+      SMALL: 4,
+      LARGE: 8
+    };
+
+    if (normalized in groupSizeMap) return groupSizeMap[normalized];
+
     const match = value.match(/\d+/);
     if (match) {
       const n = parseInt(match[0], 10);
@@ -30,6 +39,16 @@ function parseGroupSize(value: unknown): number | null {
     }
   }
   return null;
+}
+
+function parseStudyStyle(value: unknown): string | null {
+  if (!Array.isArray(value)) return null;
+
+  const styles = value
+    .map((style) => (typeof style === "string" ? style.trim() : ""))
+    .filter((style) => style.length > 0);
+
+  return styles.length > 0 ? styles.join(",") : null;
 }
 
 function mapDayOfWeek(day: number | string): string {
@@ -81,8 +100,9 @@ export async function startConsumer() {
             studyPace: payload.studyPace ?? null,
             studyMode: payload.studyMode ?? null,
             groupSize: parseGroupSize(payload.groupSize),
-            studyStyle: payload.studyStyles?.[0] ?? null
+            studyStyle: parseStudyStyle(payload.studyStyles)
           });
+          await matchingService.recalculateMatchesForUser(payload.userId);
 
           console.log(
             `[matching-service] handled ${topic} for user ${payload.userId}`
