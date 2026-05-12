@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
 import { REGISTER_MUTATION } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-import styles from './Register.module.css';
+import styles from '../styles/pages/Register.module.css';
 import hiveLogo from '../assets/images/logo.png';
 const getPasswordStrength = (password) => {
     let strength = 0;

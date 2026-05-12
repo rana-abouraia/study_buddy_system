@@ -3,8 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { gql, useQuery } from '@apollo/client';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/images/logo.png';
-import { countUnreadNotifications } from '../../utils/notifications';
-import styles from './DashboardLayout.module.css';
+import { countUnreadNotifications, isConnectedMatchNotification, isSelfMatchNotification } from '../../utils/notifications';
+import styles from '../../styles/components/layout/DashboardLayout.module.css';
 // Custom SVG icon components - all black, no background
 const DashboardIcon = () => (_jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "3", y: "3", width: "7", height: "7" }), _jsx("rect", { x: "14", y: "3", width: "7", height: "7" }), _jsx("rect", { x: "14", y: "14", width: "7", height: "7" }), _jsx("rect", { x: "3", y: "14", width: "7", height: "7" })] }));
 const FindBuddiesIcon = () => (_jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" }), _jsx("circle", { cx: "9", cy: "7", r: "4" }), _jsx("path", { d: "M23 21v-2a4 4 0 0 0-3-3.87" }), _jsx("path", { d: "M16 3.13a4 4 0 0 1 0 7.75" })] }));
@@ -37,6 +37,12 @@ const GET_NOTIFICATION_BADGE = gql `
       isRead
       createdAt
     }
+    getMyBuddies
+    getAllUsers {
+      id
+      firstName
+      lastName
+    }
     unreadNotificationsCount
   }
 `;
@@ -52,8 +58,14 @@ export default function DashboardLayout() {
         fetchPolicy: 'cache-and-network',
         pollInterval: 30000,
     });
+    const badgeNotifications = notificationBadgeData?.myNotifications ?? [];
+    const badgeUsersById = new Map((notificationBadgeData?.getAllUsers ?? []).map((badgeUser) => [
+        badgeUser.id,
+        badgeUser,
+    ]));
     const unreadCount = notificationBadgeData?.myNotifications
-        ? countUnreadNotifications(notificationBadgeData.myNotifications)
+        ? countUnreadNotifications(badgeNotifications.filter((notification) => (!isSelfMatchNotification(notification, user) &&
+            !isConnectedMatchNotification(notification, notificationBadgeData?.getMyBuddies ?? [], badgeUsersById))))
         : notificationBadgeData?.unreadNotificationsCount ?? 0;
     const handleLogout = () => {
         logout();

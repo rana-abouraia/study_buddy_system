@@ -5,31 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { GET_MY_NOTIFICATIONS } from '../graphql/queries';
 import { MARK_NOTIFICATION_AS_READ, MARK_ALL_NOTIFICATIONS_AS_READ } from '../graphql/mutations';
 import type { AppNotification, NotificationsData } from '../types';
-import { countUnreadNotifications, dedupeNotifications, isConnectedMatchNotification, isSelfMatchNotification, replaceUserIdsWithNames } from '../utils/notifications';
+import { countUnreadNotifications, dedupeNotifications, formatNotificationTimeAgo, isConnectedMatchNotification, isSelfMatchNotification, replaceUserIdsWithNames } from '../utils/notifications';
 import styles from '../styles/pages/Notifications.module.css';
 
 const PAGE_SIZE = 20;
 const MAX_NOTIFICATIONS = 100;
-
-function formatTimeAgo(dateStr: string) {
-  const numeric = Number(dateStr);
-  const dateMs = Number.isNaN(numeric)
-    ? new Date(dateStr).getTime()
-    : numeric < 1_000_000_000_000
-      ? numeric * 1000
-      : numeric;
-
-  if (Number.isNaN(dateMs)) return 'Just now';
-
-  const diffMins = Math.max(0, Math.round((Date.now() - dateMs) / 60000));
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-  const hours = Math.round(diffMins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.round(hours / 24);
-  if (days === 1) return 'Yesterday';
-  return `${days} days ago`;
-}
 
 function getIconStyle(type: string): { cls: string; svg: JSX.Element } {
   const t = type.toLowerCase();
@@ -272,7 +252,7 @@ export default function Notifications() {
                       {!notification.isRead && <span className={styles.unreadDot} />}
                     </div>
                     <p className={styles.cardMessage}>{notificationMessage}</p>
-                    <span className={styles.timeAgo}>{formatTimeAgo(notification.createdAt)}</span>
+                    <span className={styles.timeAgo}>{formatNotificationTimeAgo(notification.createdAt)}</span>
                   </div>
                 </article>
               );

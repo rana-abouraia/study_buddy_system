@@ -105,6 +105,45 @@
   gap: 6px;
 }
 
+.basicInfoForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+
+.basicInfoForm label {
+  display: grid;
+  gap: 7px;
+  color: #5f6368;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.basicInfoForm input,
+.basicInfoForm select {
+  min-width: 0;
+  height: 36px;
+  border: 1px solid #dedede;
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #171717;
+  font-size: 12px;
+  outline: none;
+}
+
+.basicInfoForm input:focus,
+.basicInfoForm select:focus {
+  border-color: #be185d;
+  box-shadow: 0 0 0 3px #fce7f3;
+}
+
+.basicInfoForm input:disabled {
+  background: #f4f4f5;
+  color: #777777;
+  cursor: not-allowed;
+}
+
 .editProfileButton {
   align-self: start;
   gap: 7px;
@@ -671,6 +710,10 @@
   }
 
   .editPrefForm {
+    grid-template-columns: 1fr;
+  }
+
+  .basicInfoForm {
     grid-template-columns: 1fr;
   }
 }

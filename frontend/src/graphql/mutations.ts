@@ -63,6 +63,25 @@ export const REGISTER_MUTATION = gql`
   ${USER_FIELDS}
 `;
 
+export const UPDATE_USER_MUTATION = gql`
+  mutation UpdateUser(
+    $firstName: String
+    $lastName: String
+    $university: String
+    $academicYear: String
+  ) {
+    updateUser(
+      firstName: $firstName
+      lastName: $lastName
+      university: $university
+      academicYear: $academicYear
+    ) {
+      ...UserFields
+    }
+  }
+  ${USER_FIELDS}
+`;
+
 export const GET_ME = gql`
   query Me {
     me {

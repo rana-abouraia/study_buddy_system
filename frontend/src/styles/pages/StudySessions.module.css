@@ -817,6 +817,72 @@
   margin-top: 6px;
 }
 
+.editModal {
+  width: min(760px, 94%);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.editFormBody {
+  display: grid;
+  gap: 18px;
+}
+
+.editGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.editLabel {
+  display: grid;
+  gap: 8px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.editInput,
+.editTextarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+}
+
+.editInput {
+  height: 44px;
+}
+
+.editTextarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.editInput:focus,
+.editTextarea:focus {
+  border-color: #0891b2;
+}
+
+.editInviteSection {
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.editInviteTitle {
+  margin: 0 0 14px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 /* ───────────────── RESPONSIVE ───────────────── */
 
 @media (max-width: 900px) {
@@ -845,6 +911,10 @@
   }
 
   .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .editGrid {
     grid-template-columns: 1fr;
   }
 

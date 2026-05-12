@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/images/logo.png';
-import styles from './Navbar.module.css';
+import styles from '../../styles/components/layout/Navbar.module.css';
 export default function Navbar() {
     const { isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();

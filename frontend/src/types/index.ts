@@ -2,8 +2,8 @@
 export interface User {
   id: string;
   email: string;
-  firstName: string;   // ← was "name"
-  lastName: string;    // ← new
+  firstName: string;
+  lastName: string;
   university?: string;
   academicYear?: string;
 }
@@ -82,7 +82,7 @@ export interface Notification {
   createdAt: string;
 }
 
-// Shared page / GraphQL data shapes
+// ─── Shared page / GraphQL data shapes ───────────────────
 export type MatchFilter = 'all' | 'high' | 'shared' | 'available';
 export type ConnectionsTabKey = 'incoming' | 'outgoing' | 'buddies';
 
@@ -199,11 +199,19 @@ export interface DashboardNotification {
   createdAt: string;
 }
 
+// ─── Outgoing buddy request (slim shape used in Dashboard) ─
+export interface OutgoingBuddyRequest {
+  id: string;
+  receiverId: string;
+  status: string;
+}
+
 export interface DashboardData {
   getMySessions: DashboardSession[];
   myNotifications: DashboardNotification[];
   unreadNotificationsCount: number;
   getRecommendedMatches: MatchResult[];
+  getOutgoingBuddyRequests: OutgoingBuddyRequest[];  // ← added
   getMyBuddies: string[];
   meProfile?: {
     courses: CourseItem[];
@@ -314,6 +322,7 @@ export interface ProfileData {
   studyStyles?: string[];
   preferredTimes?: string[];
   sessionLength?: string | null;
+  major?: string | null;
   courses?: ProfileCourse[];
   topics?: ProfileTopic[];
 }
@@ -379,4 +388,3 @@ export interface LocalCourse {
   term?: string;
   id?: string;
 }
-

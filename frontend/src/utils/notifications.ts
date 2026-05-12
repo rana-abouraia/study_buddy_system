@@ -25,6 +25,34 @@ export const getNotificationTimeMs = (value: string) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+export function formatNotificationTimeAgo(value?: string | number | null) {
+  if (value === null || value === undefined || value === '') return '';
+
+  const dateMs = typeof value === 'number'
+    ? value < 1_000_000_000_000 ? value * 1000 : value
+    : getNotificationTimeMs(value);
+
+  if (!dateMs) return 'Just now';
+
+  const diffMs = Math.max(0, Date.now() - dateMs);
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+
+  return new Date(dateMs).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 const getNotificationBatch = (value: string) => {
   const timeMs = getNotificationTimeMs(value);
   if (!timeMs) return 'unknown-time';

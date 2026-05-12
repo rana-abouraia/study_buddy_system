@@ -25,6 +25,10 @@ export function AuthProvider({ children }) {
         setToken(newToken);
         setUser(newUser);
     };
+    const updateUser = (updatedUser) => {
+        localStorage.setItem('hivemind_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+    };
     const logout = () => {
         localStorage.removeItem('hivemind_token');
         localStorage.removeItem('hivemind_user');
@@ -38,6 +42,7 @@ export function AuthProvider({ children }) {
             isAuthenticated: !!token && !!user,
             isLoading,
             login,
+            updateUser,
             logout,
         }, children: children }));
 }

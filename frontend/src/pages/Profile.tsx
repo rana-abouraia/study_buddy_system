@@ -31,6 +31,7 @@ import {
   REPLACE_COURSES,
   REPLACE_TOPICS,
   UPDATE_MATCH_PROFILE,
+  UPDATE_USER_MUTATION,
 } from '../graphql/mutations';
 import type {
   AvailabilitySlot,
@@ -68,6 +69,42 @@ const STYLE_OPTIONS = [
   { value: 'QUIET', label: 'Quiet Focus' },
 ];
 
+const COURSE_POOL: Course[] = [
+  { name: 'Calculus I', code: 'MATH101' },
+  { name: 'Calculus II', code: 'MATH102' },
+  { name: 'Multivariable Calculus', code: 'MATH201' },
+  { name: 'Linear Algebra', code: 'MATH202' },
+  { name: 'Differential Equations', code: 'MATH203' },
+  { name: 'Discrete Mathematics', code: 'MATH210' },
+  { name: 'Statistics', code: 'STAT101' },
+  { name: 'Probability & Statistics', code: 'STAT201' },
+  { name: 'Introduction to Programming', code: 'CS101' },
+  { name: 'Data Structures', code: 'CS201' },
+  { name: 'Algorithms', code: 'CS301' },
+  { name: 'Operating Systems', code: 'CS401' },
+  { name: 'Computer Networks', code: 'CS402' },
+  { name: 'Database Systems', code: 'CS403' },
+  { name: 'Machine Learning', code: 'CS501' },
+  { name: 'Artificial Intelligence', code: 'CS502' },
+  { name: 'Software Engineering', code: 'CS404' },
+];
+
+const TOPIC_POOL = [
+  'Linear Algebra',
+  'Calculus',
+  'Algorithms',
+  'Data Structures',
+  'Machine Learning',
+  'Deep Learning',
+  'Python',
+  'JavaScript',
+  'Java',
+  'C++',
+  'React',
+  'Database Design',
+  'Web Development',
+];
+
 const TIME_OPTIONS = [
   { value: 'MORNING', label: 'Morning' },
   { value: 'AFTERNOON', label: 'Afternoon' },
@@ -75,6 +112,7 @@ const TIME_OPTIONS = [
   { value: 'NIGHT', label: 'Night' },
 ];
 
+const ACADEMIC_YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate'];
 const LENGTH_OPTIONS = ['30 minutes', '1 hour', '2 hours', '3+ hours'];
 const MIN_PROFILE_SAVE_MS = 2000;
 
@@ -136,7 +174,7 @@ const getGroupSizeLabel = (value: string | null | undefined) => {
 
 // ---------- Main Component ----------
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [courseQuery, setCourseQuery] = useState('');
   const [customCourseCode, setCustomCourseCode] = useState('');
@@ -144,6 +182,13 @@ export default function Profile() {
   const [editCourses, setEditCourses] = useState<Course[]>([]);
   const [editTopics, setEditTopics] = useState<Topic[]>([]);
   const [saveInProgress, setSaveInProgress] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [editBasicInfo, setEditBasicInfo] = useState({
+    fullName: '',
+    email: '',
+    university: '',
+    academicYear: '',
+  });
   const [editPrefs, setEditPrefs] = useState({
     studyPace: '',
     studyMode: '',
@@ -172,6 +217,7 @@ export default function Profile() {
   });
 
   // Mutations
+  const [updateBasicInfo, { loading: savingBasicInfo }] = useMutation(UPDATE_USER_MUTATION);
   const [updateProfilePreferences, { loading: savingPrefs }] = useMutation(UPDATE_MATCH_PROFILE);
   const [replaceCourses, { loading: savingCourses }] = useMutation(REPLACE_COURSES);
   const [replaceTopics, { loading: savingTopics }] = useMutation(REPLACE_TOPICS);
@@ -181,7 +227,7 @@ export default function Profile() {
   const courses = profile.courses ?? [];
   const topics = profile.topics ?? [];
   const availabilitySlots: AvailabilitySlot[] = availabilityData?.getMyAvailability ?? [];
-  const savingProfile = saveInProgress || savingPrefs || savingCourses || savingTopics || recalculatingMatches;
+  const savingProfile = saveInProgress || savingBasicInfo || savingPrefs || savingCourses || savingTopics || recalculatingMatches;
 
   const allSessions: StudySession[] = sessionsData?.getMySessions ?? [];
   const pastSessions = allSessions
@@ -203,21 +249,21 @@ export default function Profile() {
     ])
   );
 
-  // Suggestions for courses (using the existing courses from DB, but you could use a pool)
+  // Suggestions mirror the onboarding pools so profile edits have the same picker coverage.
   const selectedCourseCodes = new Set(editCourses.map((course) => course.code.toUpperCase()));
   const selectedTopicNames = new Set(editTopics.map((topic) => topic.name.toLowerCase()));
-  const courseMatches = (profile.courses ?? [])
+  const courseMatches = COURSE_POOL
     .filter((course) => !selectedCourseCodes.has(course.code.toUpperCase()))
     .filter((course) => {
       const query = courseQuery.trim().toLowerCase();
-      return !query || course.name.toLowerCase().includes(query);
+      return !query || course.name.toLowerCase().includes(query) || course.code.toLowerCase().includes(query);
     })
     .slice(0, 6);
-  const topicMatches = (profile.topics ?? [])
-    .filter((topic) => !selectedTopicNames.has(topic.name.toLowerCase()))
-    .filter((topic) => {
+  const topicMatches = TOPIC_POOL
+    .filter((topicName) => !selectedTopicNames.has(topicName.toLowerCase()))
+    .filter((topicName) => {
       const query = topicQuery.trim().toLowerCase();
-      return !query || topic.name.toLowerCase().includes(query);
+      return !query || topicName.toLowerCase().includes(query);
     })
     .slice(0, 6);
 
@@ -298,6 +344,12 @@ export default function Profile() {
 
   // ---------- Edit handlers ----------
   const startEditing = () => {
+    setEditBasicInfo({
+      fullName,
+      email: user?.email ?? '',
+      university: user?.university ?? '',
+      academicYear: user?.academicYear ?? '',
+    });
     setEditPrefs({
       studyPace: profile.studyPace ?? '',
       studyMode: profile.studyMode ?? '',
@@ -311,6 +363,7 @@ export default function Profile() {
     setCourseQuery('');
     setCustomCourseCode('');
     setTopicQuery('');
+    setProfileError('');
     setIsEditing(true);
   };
 
@@ -319,6 +372,7 @@ export default function Profile() {
     setCourseQuery('');
     setCustomCourseCode('');
     setTopicQuery('');
+    setProfileError('');
   };
 
   const toggleUniqueOption = (field: 'studyStyles' | 'preferredTimes', value: string) => {
@@ -355,6 +409,14 @@ export default function Profile() {
 
   const [updateMatchingProfile] = useMutation(UPDATE_MATCHING_SERVICE_PROFILE);
 
+  const splitFullName = (value: string) => {
+    const parts = value.trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+    return {
+      firstName: parts[0] ?? '',
+      lastName: parts.slice(1).join(' '),
+    };
+  };
+
   const handleSaveProfile = async () => {
     if (saveInProgress) return;
 
@@ -367,8 +429,31 @@ export default function Profile() {
     };
 
     setSaveInProgress(true);
+    setProfileError('');
 
     try {
+      const { firstName, lastName } = splitFullName(editBasicInfo.fullName);
+      const university = editBasicInfo.university.trim();
+      const academicYear = editBasicInfo.academicYear.trim();
+
+      if (!firstName || !lastName || !university || !academicYear) {
+        setProfileError('Name, university, and academic year are required.');
+        await waitForMinimumSaveTime();
+        return;
+      }
+
+      const updatedBasicInfo = await updateBasicInfo({
+        variables: {
+          firstName,
+          lastName,
+          university,
+          academicYear,
+        },
+      });
+
+      if (updatedBasicInfo.data?.updateUser) {
+        updateUser(updatedBasicInfo.data.updateUser);
+      }
 
       // 1. Update profile‑service (keeps array for studyStyles)
       await updateProfilePreferences({
@@ -425,7 +510,7 @@ export default function Profile() {
       setIsEditing(false);
     } catch (error) {
       await waitForMinimumSaveTime();
-      throw error;
+      setProfileError(error instanceof Error ? error.message : 'Failed to save profile.');
     } finally {
       setSaveInProgress(false);
     }
@@ -441,18 +526,54 @@ export default function Profile() {
         <h1>My Profile</h1>
         <p>Manage your profile and view your study activity</p>
       </header>
+      {profileError && <div className={styles.errorBanner}>{profileError}</div>}
 
       <section className={styles.profileCard}>
         <div className={styles.avatar}>{initials}</div>
         <div className={styles.profileInfo}>
-          <h2>{fullName}</h2>
-          <p className={styles.email}>{user?.email}</p>
-          <p className={styles.bio}>{generatedBio}</p>
-          <div className={styles.profileMeta}>
-            <span><MapPin size={14} />{user?.university || 'University not set'}</span>
-            <span><GraduationCap size={14} />{user?.academicYear || 'Academic year not set'}</span>
-            <span><BookOpen size={14} />{courses.length ? `${courses.length} courses` : 'No courses yet'}</span>
-          </div>
+          {isEditing ? (
+            <div className={styles.basicInfoForm}>
+              <label>Full Name
+                <input
+                  value={editBasicInfo.fullName}
+                  onChange={(e) => setEditBasicInfo({ ...editBasicInfo, fullName: e.target.value })}
+                  placeholder="Your full name"
+                />
+              </label>
+              <label>Email
+                <input value={editBasicInfo.email} disabled />
+              </label>
+              <label>University
+                <input
+                  value={editBasicInfo.university}
+                  onChange={(e) => setEditBasicInfo({ ...editBasicInfo, university: e.target.value })}
+                  placeholder="Your university"
+                />
+              </label>
+              <label>Academic Year
+                <select
+                  value={editBasicInfo.academicYear}
+                  onChange={(e) => setEditBasicInfo({ ...editBasicInfo, academicYear: e.target.value })}
+                >
+                  <option value="">Select year</option>
+                  {ACADEMIC_YEAR_OPTIONS.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <>
+              <h2>{fullName}</h2>
+              <p className={styles.email}>{user?.email}</p>
+              <p className={styles.bio}>{generatedBio}</p>
+              <div className={styles.profileMeta}>
+                <span><MapPin size={14} />{user?.university || 'University not set'}</span>
+                <span><GraduationCap size={14} />{user?.academicYear || 'Academic year not set'}</span>
+                <span><BookOpen size={14} />{courses.length ? `${courses.length} courses` : 'No courses yet'}</span>
+              </div>
+            </>
+          )}
         </div>
         {isEditing ? (
           <div className={styles.profileActions}>
@@ -536,9 +657,9 @@ export default function Profile() {
                 <button type="button" onClick={() => addTopicToEdit(topicQuery)}><Plus size={16} /></button>
               </div>
               <div className={styles.suggestionList}>
-                {topicMatches.length ? topicMatches.map((topic) => (
-                  <button key={topic.name} type="button" onClick={() => addTopicToEdit(topic.name)}>
-                    {topic.name}
+                {topicMatches.length ? topicMatches.map((topicName) => (
+                  <button key={topicName} type="button" onClick={() => addTopicToEdit(topicName)}>
+                    {topicName}
                   </button>
                 )) : <p>{topicQuery ? 'No matching topics.' : 'Start typing to search.'}</p>}
               </div>

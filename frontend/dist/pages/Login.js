@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
 import { LOGIN_MUTATION } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-import styles from './Login.module.css';
+import styles from '../styles/pages/Login.module.css';
 import brainImage from '../assets/images/login.png';
 import hiveLogo from '../assets/images/logo.png';
 export default function Login() {
@@ -42,8 +42,9 @@ export default function Login() {
     };
     const handleChange = (e) => {
         const { name, value } = e.target;
+        const fieldName = name;
         setForm((prev) => ({ ...prev, [name]: value }));
-        if (errors[name]) {
+        if (errors[fieldName]) {
             setErrors((prev) => ({ ...prev, [name]: undefined }));
         }
     };

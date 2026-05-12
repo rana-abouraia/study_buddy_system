@@ -1,4 +1,5 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client';
+import { Eye } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GET_CONNECTIONS_DATA, GET_COURSES_AND_TOPICS } from '../graphql/queries';
@@ -173,9 +174,8 @@ export default function Connections() {
     const person = getUser(userId);
 
     if (person) {
-      return `${person.firstName?.[0] ?? ''}${
-        person.lastName?.[0] ?? ''
-      }`.toUpperCase();
+      return `${person.firstName?.[0] ?? ''}${person.lastName?.[0] ?? ''
+        }`.toUpperCase();
     }
 
     return userId.slice(0, 2).toUpperCase() || 'SB';
@@ -242,9 +242,8 @@ export default function Connections() {
       >
         <div className={styles.cardTop}>
           <div
-            className={`${styles.avatar} ${
-              styles[`avatar${Math.abs(userId.length % 4)}`]
-            }`}
+            className={`${styles.avatar} ${styles[`avatar${Math.abs(userId.length % 4)}`]
+              }`}
           >
             {getInitials(userId)}
           </div>
@@ -295,7 +294,7 @@ export default function Connections() {
                 onClick={() => handleAccept(options.request!.id)}
                 disabled={accepting || rejecting}
               >
-                ? Accept
+                Accept
               </button>
 
               <button
@@ -304,17 +303,19 @@ export default function Connections() {
                 onClick={() => handleReject(options.request!.id)}
                 disabled={accepting || rejecting}
               >
-                ? Reject
+                Reject
               </button>
 
               <button
                 type="button"
                 className={styles.eyeButton}
+                aria-label="View profile"
+                title="View profile"
                 onClick={() => navigate('/find-buddies', {
-  state: { selectedUserId: userId }
-})}
+                  state: { selectedUserId: userId }
+                })}
               >
-                ??
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -326,11 +327,13 @@ export default function Connections() {
               <button
                 type="button"
                 className={styles.eyeButton}
-                onClick={() =>navigate('/find-buddies', {
-  state: { selectedUserId: userId }
-})}
+                aria-label="View profile"
+                title="View profile"
+                onClick={() => navigate('/find-buddies', {
+                  state: { selectedUserId: userId }
+                })}
               >
-                ??
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -360,11 +363,13 @@ export default function Connections() {
               <button
                 type="button"
                 className={styles.eyeButton}
+                aria-label="View profile"
+                title="View profile"
                 onClick={() => navigate('/find-buddies', {
-  state: { selectedUserId: userId }
-})}
+                  state: { selectedUserId: userId }
+                })}
               >
-                ??
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -440,9 +445,8 @@ export default function Connections() {
           <button
             key={tab.key}
             type="button"
-            className={`${styles.tab} ${
-              activeTab === tab.key ? styles.activeTab : ''
-            }`}
+            className={`${styles.tab} ${activeTab === tab.key ? styles.activeTab : ''
+              }`}
             onClick={() => setActiveTab(tab.key)}
           >
             <span className={styles[`${tab.accent}Dot`]} />

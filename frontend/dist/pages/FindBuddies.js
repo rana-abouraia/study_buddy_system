@@ -5,13 +5,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GET_COURSES_AND_TOPICS, GET_FIND_BUDDIES_DATA, GET_MATCH_PROFILE } from '../graphql/queries';
 import { SEND_BUDDY_REQUEST } from '../graphql/mutations';
-import styles from './FindBuddies.module.css';
+import styles from '../styles/pages/FindBuddies.module.css';
 // Mapping from string (profile-service) to number (for display)
 const GROUP_SIZE_STRING_TO_NUMBER = {
     'ONE_ON_ONE': 2,
     'SMALL': 4,
     'LARGE': 8,
 };
+const FIND_BUDDIES_MATCH_LIMIT = 100;
 export default function FindBuddies() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -42,11 +43,11 @@ export default function FindBuddies() {
         }
     }, [location.state]);
     const { data, loading, error, refetch } = useQuery(GET_FIND_BUDDIES_DATA, {
-        variables: { matchLimit: 24 },
+        variables: { matchLimit: FIND_BUDDIES_MATCH_LIMIT },
         fetchPolicy: 'cache-and-network',
     });
     const [sendRequest, { loading: sending }] = useMutation(SEND_BUDDY_REQUEST, {
-        refetchQueries: [{ query: GET_FIND_BUDDIES_DATA, variables: { matchLimit: 24 } }],
+        refetchQueries: [{ query: GET_FIND_BUDDIES_DATA, variables: { matchLimit: FIND_BUDDIES_MATCH_LIMIT } }],
         awaitRefetchQueries: true,
     });
     const usersById = useMemo(() => new Map(data?.getAllUsers?.map((person) => [person.id, person]) ?? []), [data?.getAllUsers]);

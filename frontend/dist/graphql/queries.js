@@ -10,6 +10,12 @@ export const GET_MY_NOTIFICATIONS = gql `
       createdAt
     }
     unreadNotificationsCount
+    getMyBuddies
+    getAllUsers {
+      id
+      firstName
+      lastName
+    }
   }
 `;
 export const GET_DASHBOARD_DATA = gql `
@@ -37,12 +43,17 @@ export const GET_DASHBOARD_DATA = gql `
       isRead
       createdAt
     }
-      unreadNotificationsCount
+    unreadNotificationsCount
     getRecommendedMatches(limit: $matchLimit) {
       id
       candidateUserId
       compatibility
       reasons
+    }
+    getOutgoingBuddyRequests {
+      id
+      receiverId
+      status
     }
     getMyBuddies
     meProfile {
@@ -97,28 +108,6 @@ export const GET_MATCH_PROFILE = gql `
         startTime
         endTime
       }
-    }
-  }
-`;
-export const UPDATE_MATCHING_SERVICE_PROFILE = gql `
-  mutation UpdateMatchingProfile($input: UpdateMatchProfileInput!) {
-    updateMatchProfile(input: $input) {
-      userId
-      studyPace
-      studyMode
-      groupSize
-      studyStyle
-    }
-  }
-`;
-export const RECALCULATE_MATCHES = gql `
-  mutation RecalculateMatches {
-    recalculateMatches {
-      id
-      userId
-      candidateUserId
-      compatibility
-      reasons
     }
   }
 `;
@@ -279,6 +268,28 @@ export const GET_MY_AVAILABILITY = gql `
     }
   }
 `;
+export const UPDATE_MATCHING_SERVICE_PROFILE = gql `
+  mutation UpdateMatchingProfile($input: UpdateMatchProfileInput!) {
+    updateMatchProfile(input: $input) {
+      userId
+      studyPace
+      studyMode
+      groupSize
+      studyStyle
+    }
+  }
+`;
+export const RECALCULATE_MATCHES = gql `
+  mutation RecalculateMatches {
+    recalculateMatches {
+      id
+      userId
+      candidateUserId
+      compatibility
+      reasons
+    }
+  }
+`;
 export const ADD_AVAILABILITY_SLOT = gql `
   mutation AddAvailabilitySlot($dayOfWeek: Int!, $startTime: String!, $endTime: String!, $isRecurring: Boolean) {
     addAvailabilitySlot(dayOfWeek: $dayOfWeek, startTime: $startTime, endTime: $endTime, isRecurring: $isRecurring) {
@@ -295,7 +306,6 @@ export const DELETE_AVAILABILITY_SLOT = gql `
     deleteAvailabilitySlot(id: $id)
   }
 `;
-// ==================== PROFILE SERVICE MUTATIONS ====================
 export const UPDATE_MATCH_PROFILE = gql `
   mutation UpdatePreferences($input: UpdatePreferencesInput!) {
     updatePreferences(input: $input) {
@@ -413,6 +423,18 @@ export const REMOVE_TOPIC = gql `
         id
         name
       }
+    }
+  }
+`;
+export const GET_CONNECTIONS_PROFILE = gql `
+  query GetConnectionsProfile {
+    getMyBuddies
+    getAllUsers {
+      id
+      firstName
+      lastName
+      university
+      academicYear
     }
   }
 `;

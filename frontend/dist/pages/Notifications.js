@@ -2,26 +2,13 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { useMutation, useQuery } from '@apollo/client';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { GET_MY_NOTIFICATIONS } from '../graphql/queries';
 import { MARK_NOTIFICATION_AS_READ, MARK_ALL_NOTIFICATIONS_AS_READ } from '../graphql/mutations';
-import { dedupeNotifications } from '../utils/notifications';
-import styles from './Notifications.module.css';
+import { countUnreadNotifications, dedupeNotifications, formatNotificationTimeAgo, isConnectedMatchNotification, isSelfMatchNotification, replaceUserIdsWithNames } from '../utils/notifications';
+import styles from '../styles/pages/Notifications.module.css';
 const PAGE_SIZE = 20;
-function formatTimeAgo(dateStr) {
-    const date = new Date(dateStr);
-    if (Number.isNaN(date.getTime()))
-        return 'Recently';
-    const diffMins = Math.max(1, Math.round((Date.now() - date.getTime()) / 60000));
-    if (diffMins < 60)
-        return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-    const hours = Math.round(diffMins / 60);
-    if (hours < 24)
-        return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-    const days = Math.round(hours / 24);
-    if (days === 1)
-        return 'Yesterday';
-    return `${days} days ago`;
-}
+const MAX_NOTIFICATIONS = 100;
 function getIconStyle(type) {
     const t = type.toLowerCase();
     if (t.includes('match')) {
@@ -85,23 +72,33 @@ function getNavigationTarget(type) {
 }
 export default function Notifications() {
     const navigate = useNavigate();
-    const [limit, setLimit] = useState(PAGE_SIZE);
+    const { user } = useAuth();
+    const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
     const { data, loading, error } = useQuery(GET_MY_NOTIFICATIONS, {
-        variables: { limit },
+        variables: { limit: MAX_NOTIFICATIONS },
         fetchPolicy: 'cache-and-network',
     });
     const [markRead] = useMutation(MARK_NOTIFICATION_AS_READ, {
-        refetchQueries: [{ query: GET_MY_NOTIFICATIONS, variables: { limit } }],
+        refetchQueries: [{ query: GET_MY_NOTIFICATIONS, variables: { limit: MAX_NOTIFICATIONS } }],
     });
     const [markAllRead, { loading: markingAll }] = useMutation(MARK_ALL_NOTIFICATIONS_AS_READ, {
-        refetchQueries: [{ query: GET_MY_NOTIFICATIONS, variables: { limit } }],
+        refetchQueries: [{ query: GET_MY_NOTIFICATIONS, variables: { limit: MAX_NOTIFICATIONS } }],
         awaitRefetchQueries: true,
     });
-    const allNotifications = data?.myNotifications ?? [];
+    const usersById = new Map((data?.getAllUsers ?? []).map((user) => [
+        user.id,
+        user,
+    ]));
+    const displayNamesById = new Map((data?.getAllUsers ?? []).map((user) => [
+        user.id,
+        `${user.firstName} ${user.lastName}`.trim(),
+    ]));
+    const allNotifications = (data?.myNotifications ?? []).filter((notification) => (!isSelfMatchNotification(notification, user) &&
+        !isConnectedMatchNotification(notification, data?.getMyBuddies ?? [], usersById)));
     const notifications = dedupeNotifications(allNotifications);
-    const unreadCount = notifications.filter((notification) => !notification.isRead).length;
-    // Backend caps at 100 — hide the button once we've hit that or got fewer than a full page
-    const hasMore = allNotifications.length === limit && limit < 100;
+    const visibleNotifications = notifications.slice(0, visibleLimit);
+    const unreadCount = countUnreadNotifications(allNotifications);
+    const hasMore = visibleNotifications.length < notifications.length;
     const handleClick = async (notification) => {
         if (!notification.isRead) {
             await Promise.all(notification.duplicateUnreadIds.map((id) => markRead({ variables: { id } })));
@@ -114,7 +111,7 @@ export default function Notifications() {
         await markAllRead();
     };
     const handleLoadMore = () => {
-        setLimit((prev) => Math.min(prev + PAGE_SIZE, 100));
+        setVisibleLimit((prev) => Math.min(prev + PAGE_SIZE, notifications.length));
     };
     if (loading && notifications.length === 0) {
         return _jsx("div", { className: styles.statePanel, children: "Loading notifications..." });
@@ -122,8 +119,9 @@ export default function Notifications() {
     if (error) {
         return _jsx("div", { className: styles.statePanel, children: "Unable to load notifications. Please try again." });
     }
-    return (_jsxs("section", { className: styles.page, children: [_jsxs("header", { className: styles.header, children: [_jsxs("div", { children: [_jsx("h1", { children: "Notifications" }), _jsx("p", { children: "Stay updated with your study buddy activities" })] }), unreadCount > 0 && (_jsx("button", { type: "button", className: styles.markAllBtn, onClick: handleMarkAllRead, disabled: markingAll, children: markingAll ? 'Marking...' : 'Mark all as read' }))] }), _jsxs("div", { className: styles.listHeader, children: [_jsx("h2", { children: "All Notifications" }), unreadCount > 0 && (_jsxs("span", { className: styles.unreadBadge, children: [unreadCount, " unread notification", unreadCount !== 1 ? 's' : ''] }))] }), notifications.length === 0 ? (_jsxs("div", { className: styles.emptyState, children: [_jsx("div", { className: styles.emptyIcon, children: _jsxs("svg", { width: "40", height: "40", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.2", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }), _jsx("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" })] }) }), _jsx("h3", { children: "No notifications yet" }), _jsx("p", { children: "Buddy matches, requests, and session reminders will appear here." })] })) : (_jsxs(_Fragment, { children: [_jsx("div", { className: styles.list, children: notifications.map((notification) => {
+    return (_jsxs("section", { className: styles.page, children: [_jsxs("header", { className: styles.header, children: [_jsxs("div", { children: [_jsx("h1", { children: "Notifications" }), _jsx("p", { children: "Stay updated with your study buddy activities" })] }), unreadCount > 0 && (_jsx("button", { type: "button", className: styles.markAllBtn, onClick: handleMarkAllRead, disabled: markingAll, children: markingAll ? 'Marking...' : 'Mark all as read' }))] }), _jsxs("div", { className: styles.listHeader, children: [_jsx("h2", { children: "All Notifications" }), _jsx("div", { className: styles.countGroup, children: unreadCount > 0 && (_jsxs("span", { className: styles.unreadBadge, children: [unreadCount, " unread"] })) })] }), visibleNotifications.length === 0 ? (_jsxs("div", { className: styles.emptyState, children: [_jsx("div", { className: styles.emptyIcon, children: _jsxs("svg", { width: "40", height: "40", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.2", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }), _jsx("path", { d: "M13.73 21a2 2 0 0 1-3.46 0" })] }) }), _jsx("h3", { children: "No notifications yet" }), _jsx("p", { children: "Buddy matches, requests, and session reminders will appear here." })] })) : (_jsxs(_Fragment, { children: [_jsx("div", { className: styles.list, children: visibleNotifications.map((notification) => {
                             const { cls, svg } = getIconStyle(notification.type);
-                            return (_jsxs("article", { className: `${styles.card} ${!notification.isRead ? styles.cardUnread : ''}`, onClick: () => handleClick(notification), role: "button", tabIndex: 0, onKeyDown: (e) => e.key === 'Enter' && handleClick(notification), children: [_jsx("div", { className: `${styles.iconWrap} ${cls}`, children: svg }), _jsxs("div", { className: styles.cardBody, children: [_jsxs("div", { className: styles.cardTop, children: [_jsx("strong", { className: styles.cardTitle, children: notification.title }), !notification.isRead && _jsx("span", { className: styles.unreadDot })] }), _jsx("p", { className: styles.cardMessage, children: notification.message }), _jsx("span", { className: styles.timeAgo, children: formatTimeAgo(notification.createdAt) })] })] }, notification.id));
+                            const notificationMessage = replaceUserIdsWithNames(notification.message, displayNamesById);
+                            return (_jsxs("article", { className: `${styles.card} ${!notification.isRead ? styles.cardUnread : ''}`, onClick: () => handleClick(notification), role: "button", tabIndex: 0, onKeyDown: (e) => e.key === 'Enter' && handleClick(notification), children: [_jsx("div", { className: `${styles.iconWrap} ${cls}`, children: svg }), _jsxs("div", { className: styles.cardBody, children: [_jsxs("div", { className: styles.cardTop, children: [_jsx("strong", { className: styles.cardTitle, children: notification.title }), !notification.isRead && _jsx("span", { className: styles.unreadDot })] }), _jsx("p", { className: styles.cardMessage, children: notificationMessage }), _jsx("span", { className: styles.timeAgo, children: formatNotificationTimeAgo(notification.createdAt) })] })] }, notification.id));
                         }) }), hasMore && (_jsx("button", { type: "button", className: styles.loadMoreBtn, onClick: handleLoadMore, disabled: loading, children: loading ? 'Loading...' : 'Load more notifications' }))] }))] }));
 }

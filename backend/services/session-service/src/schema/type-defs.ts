@@ -46,6 +46,11 @@ export const typeDefs = `#graphql
 
     updateSession(
       sessionId: ID!
+      topic: String
+      description: String
+      date: String
+      duration: Int
+      sessionType: String
       meetingLink: String
       location: String
       participantIds: [ID!]

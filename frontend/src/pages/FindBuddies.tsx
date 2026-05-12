@@ -395,6 +395,9 @@ export default function FindBuddies() {
     return `${displayHour}:${String(minutes).padStart(2, '0')} ${suffix}`;
   };
 
+  const formatMinutes = (minutes: number) =>
+    formatTime(`${Math.floor(minutes / 60)}:${minutes % 60}`);
+
   const formatSlot = (slot: MatchAvailabilitySlot) =>
     `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`;
 
@@ -410,10 +413,26 @@ export default function FindBuddies() {
     return 'No availability set yet';
   };
 
+  const mergeAvailabilityRows = (rows: Array<{ day: string; start: number; end: number }>) => {
+    const sorted = [...rows].sort((a, b) => a.day.localeCompare(b.day) || a.start - b.start);
+    const merged: Array<{ day: string; start: number; end: number }> = [];
+
+    for (const row of sorted) {
+      const previous = merged[merged.length - 1];
+      if (previous && previous.day === row.day && previous.end >= row.start) {
+        previous.end = Math.max(previous.end, row.end);
+      } else {
+        merged.push({ ...row });
+      }
+    }
+
+    return merged;
+  };
+
   const getAvailabilityRows = (candidateId: string, fallback?: string) => {
     const candidateSlots = matchProfiles[candidateId]?.availabilitySlots ?? [];
     const mySlots = myMatchProfile?.availabilitySlots ?? [];
-    const rows: Array<{ day: string; time: string }> = [];
+    const rows: Array<{ day: string; start: number; end: number }> = [];
 
     for (const candidateSlot of candidateSlots) {
       const sameDayMine = mySlots.filter(
@@ -421,7 +440,11 @@ export default function FindBuddies() {
       );
 
       if (sameDayMine.length === 0) {
-        rows.push({ day: normalizeDay(candidateSlot.dayOfWeek), time: formatSlot(candidateSlot) });
+        rows.push({
+          day: normalizeDay(candidateSlot.dayOfWeek),
+          start: minutesFromTime(candidateSlot.startTime),
+          end: minutesFromTime(candidateSlot.endTime),
+        });
         continue;
       }
 
@@ -432,13 +455,21 @@ export default function FindBuddies() {
         if (start < end) {
           rows.push({
             day: normalizeDay(candidateSlot.dayOfWeek),
-            time: `${formatTime(`${Math.floor(start / 60)}:${start % 60}`)} - ${formatTime(`${Math.floor(end / 60)}:${end % 60}`)}`,
+            start,
+            end,
           });
         }
       }
     }
 
-    if (rows.length > 0) return rows.slice(0, 6);
+    if (rows.length > 0) {
+      return mergeAvailabilityRows(rows)
+        .slice(0, 6)
+        .map((row) => ({
+          day: row.day,
+          time: `${formatMinutes(row.start)} - ${formatMinutes(row.end)}`,
+        }));
+    }
     return [{ day: 'Availability', time: summarizeAvailability(candidateId, fallback) }];
   };
 
@@ -523,9 +554,9 @@ export default function FindBuddies() {
           <div className={styles.detailProfile}>
             <div className={styles.detailAvatar}>{getInitials(selectedCandidateId)}</div>
             <h1>{getName(selectedCandidateId)}</h1>
-            <p>{person?.academicYear || 'Computer Science Junior'}</p>
-            <p>{person?.university || 'German International University'}</p>
-            <p>{person ? `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@studybuddy.edu` : 'student@studybuddy.edu'}</p>
+            <p>{person?.academicYear || 'Academic year not set'}</p>
+            <p>{person?.university || 'University not set'}</p>
+            <p>{person?.email || 'Email not set'}</p>
           </div>
 
           <div className={styles.aboutPanel}>

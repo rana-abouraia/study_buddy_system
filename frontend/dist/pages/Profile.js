@@ -1,10 +1,11 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useMutation, useQuery } from '@apollo/client';
 import { BookOpen, CalendarDays, Check, Clock3, Edit3, GraduationCap, MapPin, Monitor, Plus, Save, Search, Tag, Trash2, Users, X, } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { GET_CONNECTIONS_DATA, GET_COURSES_AND_TOPICS, GET_MY_AVAILABILITY, GET_STUDY_SESSIONS_DATA, RECALCULATE_MATCHES, REPLACE_COURSES, REPLACE_TOPICS, UPDATE_MATCH_PROFILE, UPDATE_MATCHING_SERVICE_PROFILE, } from '../graphql/queries';
-import styles from './Profile.module.css';
+import { GET_CONNECTIONS_DATA, GET_COURSES_AND_TOPICS, GET_MY_AVAILABILITY, GET_STUDY_SESSIONS_DATA, } from '../graphql/queries';
+import { RECALCULATE_MATCHES, UPDATE_MATCHING_SERVICE_PROFILE, REPLACE_COURSES, REPLACE_TOPICS, UPDATE_MATCH_PROFILE, UPDATE_USER_MUTATION, } from '../graphql/mutations';
+import styles from '../styles/pages/Profile.module.css';
 // ---------- Constants (matching your reference) ----------
 const PACE_OPTIONS = [
     { value: 'SLOW', label: 'Slow & Steady' },
@@ -90,7 +91,7 @@ const getGroupSizeLabel = (value) => {
 };
 // ---------- Main Component ----------
 export default function Profile() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [courseQuery, setCourseQuery] = useState('');
     const [customCourseCode, setCustomCourseCode] = useState('');
@@ -98,6 +99,13 @@ export default function Profile() {
     const [editCourses, setEditCourses] = useState([]);
     const [editTopics, setEditTopics] = useState([]);
     const [saveInProgress, setSaveInProgress] = useState(false);
+    const [profileError, setProfileError] = useState('');
+    const [editBasicInfo, setEditBasicInfo] = useState({
+        fullName: '',
+        email: '',
+        university: '',
+        academicYear: '',
+    });
     const [editPrefs, setEditPrefs] = useState({
         studyPace: '',
         studyMode: '',
@@ -121,6 +129,7 @@ export default function Profile() {
         skip: !user?.id,
     });
     // Mutations
+    const [updateBasicInfo, { loading: savingBasicInfo }] = useMutation(UPDATE_USER_MUTATION);
     const [updateProfilePreferences, { loading: savingPrefs }] = useMutation(UPDATE_MATCH_PROFILE);
     const [replaceCourses, { loading: savingCourses }] = useMutation(REPLACE_COURSES);
     const [replaceTopics, { loading: savingTopics }] = useMutation(REPLACE_TOPICS);
@@ -129,7 +138,7 @@ export default function Profile() {
     const courses = profile.courses ?? [];
     const topics = profile.topics ?? [];
     const availabilitySlots = availabilityData?.getMyAvailability ?? [];
-    const savingProfile = saveInProgress || savingPrefs || savingCourses || savingTopics || recalculatingMatches;
+    const savingProfile = saveInProgress || savingBasicInfo || savingPrefs || savingCourses || savingTopics || recalculatingMatches;
     const allSessions = sessionsData?.getMySessions ?? [];
     const pastSessions = allSessions
         .filter((session) => new Date(session.date) < new Date())
@@ -233,6 +242,12 @@ export default function Profile() {
     }, []);
     // ---------- Edit handlers ----------
     const startEditing = () => {
+        setEditBasicInfo({
+            fullName,
+            email: user?.email ?? '',
+            university: user?.university ?? '',
+            academicYear: user?.academicYear ?? '',
+        });
         setEditPrefs({
             studyPace: profile.studyPace ?? '',
             studyMode: profile.studyMode ?? '',
@@ -246,6 +261,7 @@ export default function Profile() {
         setCourseQuery('');
         setCustomCourseCode('');
         setTopicQuery('');
+        setProfileError('');
         setIsEditing(true);
     };
     const cancelEditing = () => {
@@ -253,6 +269,7 @@ export default function Profile() {
         setCourseQuery('');
         setCustomCourseCode('');
         setTopicQuery('');
+        setProfileError('');
     };
     const toggleUniqueOption = (field, value) => {
         setEditPrefs((current) => {
@@ -285,6 +302,13 @@ export default function Profile() {
         setTopicQuery('');
     };
     const [updateMatchingProfile] = useMutation(UPDATE_MATCHING_SERVICE_PROFILE);
+    const splitFullName = (value) => {
+        const parts = value.trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+        return {
+            firstName: parts[0] ?? '',
+            lastName: parts.slice(1).join(' '),
+        };
+    };
     const handleSaveProfile = async () => {
         if (saveInProgress)
             return;
@@ -296,7 +320,27 @@ export default function Profile() {
             }
         };
         setSaveInProgress(true);
+        setProfileError('');
         try {
+            const { firstName, lastName } = splitFullName(editBasicInfo.fullName);
+            const university = editBasicInfo.university.trim();
+            const academicYear = editBasicInfo.academicYear.trim();
+            if (!firstName || !lastName || !university || !academicYear) {
+                setProfileError('Name, university, and academic year are required.');
+                await waitForMinimumSaveTime();
+                return;
+            }
+            const updatedBasicInfo = await updateBasicInfo({
+                variables: {
+                    firstName,
+                    lastName,
+                    university,
+                    academicYear,
+                },
+            });
+            if (updatedBasicInfo.data?.updateUser) {
+                updateUser(updatedBasicInfo.data.updateUser);
+            }
             // 1. Update profile‑service (keeps array for studyStyles)
             await updateProfilePreferences({
                 variables: {
@@ -347,7 +391,7 @@ export default function Profile() {
         }
         catch (error) {
             await waitForMinimumSaveTime();
-            throw error;
+            setProfileError(error instanceof Error ? error.message : 'Failed to save profile.');
         }
         finally {
             setSaveInProgress(false);
@@ -356,7 +400,7 @@ export default function Profile() {
     if (profileLoading || availabilityLoading || sessionsLoading || connectionsLoading) {
         return _jsx("div", { className: styles.loadingState, children: "Loading profile..." });
     }
-    return (_jsxs("main", { className: styles.page, children: [_jsxs("header", { className: styles.header, children: [_jsx("h1", { children: "My Profile" }), _jsx("p", { children: "Manage your profile and view your study activity" })] }), _jsxs("section", { className: styles.profileCard, children: [_jsx("div", { className: styles.avatar, children: initials }), _jsxs("div", { className: styles.profileInfo, children: [_jsx("h2", { children: fullName }), _jsx("p", { className: styles.email, children: user?.email }), _jsx("p", { className: styles.bio, children: generatedBio }), _jsxs("div", { className: styles.profileMeta, children: [_jsxs("span", { children: [_jsx(MapPin, { size: 14 }), user?.university || 'University not set'] }), _jsxs("span", { children: [_jsx(GraduationCap, { size: 14 }), user?.academicYear || 'Academic year not set'] }), _jsxs("span", { children: [_jsx(BookOpen, { size: 14 }), courses.length ? `${courses.length} courses` : 'No courses yet'] })] })] }), isEditing ? (_jsxs("div", { className: styles.profileActions, children: [_jsxs("button", { className: styles.cancelProfileButton, onClick: cancelEditing, children: [_jsx(X, { size: 14 }), " Cancel"] }), _jsxs("button", { className: styles.editProfileButton, onClick: handleSaveProfile, disabled: savingProfile, children: [_jsx(Save, { size: 14 }), " ", savingProfile ? 'Saving...' : 'Save Profile'] })] })) : (_jsxs("button", { className: styles.editProfileButton, onClick: startEditing, children: [_jsx(Edit3, { size: 14 }), " Edit Profile"] }))] }), _jsxs("div", { className: styles.twoColumnGrid, children: [_jsxs("section", { className: styles.squareCard, children: [_jsxs("h3", { children: [_jsx(BookOpen, { size: 22 }), " Shared Courses"] }), _jsx("div", { className: styles.coursesList, children: (isEditing ? editCourses : courses).length ? (isEditing ? editCourses : courses).map((course) => (_jsxs("article", { className: styles.courseItem, children: [_jsxs("div", { children: [_jsx("strong", { children: course.name }), _jsxs("span", { children: [course.code, course.term ? ` - ${course.term}` : ''] })] }), isEditing && (_jsx("button", { className: styles.iconButton, onClick: () => setEditCourses((prev) => prev.filter((c) => c.code !== course.code)), children: _jsx(Trash2, { size: 14 }) }))] }, course.id ?? course.code))) : _jsx("p", { className: styles.emptyText, children: "No courses added yet." }) }), isEditing && (_jsxs("div", { className: styles.picker, children: [_jsxs("label", { children: [_jsx(Search, { size: 13 }), " Find a course by name or code"] }), _jsxs("div", { className: styles.searchRow, children: [_jsx("input", { value: courseQuery, onChange: (e) => setCourseQuery(e.target.value), placeholder: "Search course name" }), _jsx("input", { value: customCourseCode, onChange: (e) => setCustomCourseCode(e.target.value), placeholder: "Code" }), _jsx("button", { type: "button", onClick: addCustomCourse, children: _jsx(Plus, { size: 16 }) })] }), _jsx("div", { className: styles.suggestionList, children: courseMatches.length ? courseMatches.map((course) => (_jsxs("button", { type: "button", onClick: () => addCourseToEdit(course), children: [_jsx("span", { children: course.code }), " ", course.name] }, course.code))) : _jsx("p", { children: courseQuery ? 'No matching courses.' : 'Start typing to search.' }) })] }))] }), _jsxs("section", { className: styles.squareCard, children: [_jsxs("h3", { children: [_jsx(Tag, { size: 22 }), " Study Topics"] }), _jsx("div", { className: styles.topicsList, children: (isEditing ? editTopics : topics).length ? (isEditing ? editTopics : topics).map((topic) => (_jsxs("span", { className: styles.topicTag, children: [topic.name, isEditing && (_jsx("button", { onClick: () => setEditTopics((prev) => prev.filter((t) => t.name !== topic.name)), children: _jsx(Trash2, { size: 11 }) }))] }, topic.id ?? topic.name))) : _jsx("p", { className: styles.emptyText, children: "No study topics added yet." }) }), isEditing && (_jsxs("div", { className: styles.picker, children: [_jsxs("label", { children: [_jsx(Search, { size: 13 }), " Pick a topic or type your own"] }), _jsxs("div", { className: styles.searchRowSingle, children: [_jsx("input", { value: topicQuery, onChange: (e) => setTopicQuery(e.target.value), onKeyDown: (e) => e.key === 'Enter' && addTopicToEdit(topicQuery), placeholder: "Search topics" }), _jsx("button", { type: "button", onClick: () => addTopicToEdit(topicQuery), children: _jsx(Plus, { size: 16 }) })] }), _jsx("div", { className: styles.suggestionList, children: topicMatches.length ? topicMatches.map((topic) => (_jsx("button", { type: "button", onClick: () => addTopicToEdit(topic.name), children: topic.name }, topic.name))) : _jsx("p", { children: topicQuery ? 'No matching topics.' : 'Start typing to search.' }) })] }))] })] }), _jsxs("section", { className: styles.preferencesCard, children: [_jsxs("h3", { children: [_jsx(Clock3, { size: 22 }), " Study Preferences"] }), isEditing ? (_jsxs("div", { className: styles.editPrefForm, children: [_jsxs("label", { children: ["Study Pace", _jsxs("select", { value: editPrefs.studyPace, onChange: (e) => setEditPrefs({ ...editPrefs, studyPace: e.target.value }), children: [_jsx("option", { value: "", children: "Select pace" }), PACE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("label", { children: ["Study Mode", _jsxs("select", { value: editPrefs.studyMode, onChange: (e) => setEditPrefs({ ...editPrefs, studyMode: e.target.value }), children: [_jsx("option", { value: "", children: "Select mode" }), MODE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("label", { children: ["Group Size", _jsxs("select", { value: editPrefs.groupSize, onChange: (e) => setEditPrefs({ ...editPrefs, groupSize: e.target.value }), children: [_jsx("option", { value: "", children: "Select group size" }), SIZE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("div", { className: styles.optionGroup, children: [_jsx("span", { children: "Study Styles" }), _jsx("div", { className: styles.chipGroup, children: STYLE_OPTIONS.map((opt) => (_jsxs("button", { className: editPrefs.studyStyles.includes(opt.value) ? styles.optionChipActive : styles.optionChip, type: "button", onClick: () => toggleUniqueOption('studyStyles', opt.value), children: [editPrefs.studyStyles.includes(opt.value) && _jsx(Check, { size: 12 }), opt.label] }, opt.value))) })] }), _jsxs("div", { className: styles.optionGroup, children: [_jsx("span", { children: "Preferred Times" }), _jsx("div", { className: styles.chipGroup, children: TIME_OPTIONS.map((opt) => (_jsxs("button", { className: editPrefs.preferredTimes.includes(opt.value) ? styles.optionChipActive : styles.optionChip, type: "button", onClick: () => toggleUniqueOption('preferredTimes', opt.value), children: [editPrefs.preferredTimes.includes(opt.value) && _jsx(Check, { size: 12 }), opt.label] }, opt.value))) })] }), _jsxs("label", { children: ["Session Length", _jsxs("select", { value: editPrefs.sessionLength, onChange: (e) => setEditPrefs({ ...editPrefs, sessionLength: e.target.value }), children: [_jsx("option", { value: "", children: "Optional" }), LENGTH_OPTIONS.map((opt) => _jsx("option", { value: opt, children: opt }, opt))] })] })] })) : (_jsxs("div", { className: styles.preferenceGrid, children: [_jsxs("article", { children: [_jsx("span", { children: "Study Pace" }), _jsx("strong", { children: labelFor(profile.studyPace, PACE_OPTIONS) })] }), _jsxs("article", { children: [_jsx("span", { children: "Study Mode" }), _jsx("strong", { children: labelFor(profile.studyMode, MODE_OPTIONS) })] }), _jsxs("article", { children: [_jsx("span", { children: "Group Size" }), _jsx("strong", { children: getGroupSizeLabel(profile.groupSize) })] }), _jsxs("article", { children: [_jsx("span", { children: "Study Styles" }), _jsx("strong", { children: displayedStudyStyles })] }), _jsxs("article", { children: [_jsx("span", { children: "Preferred Times" }), _jsx("strong", { children: preferredTimes })] }), _jsxs("article", { children: [_jsx("span", { children: "Session Length" }), _jsx("strong", { children: profile.sessionLength || 'Not set' })] })] }))] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("div", { className: styles.cardTitleRow, children: [_jsxs("h3", { children: [_jsx(CalendarDays, { size: 22 }), " Past Study Sessions"] }), _jsxs("span", { children: [pastSessions.length, " total sessions"] })] }), _jsx("div", { className: styles.sessionsList, children: pastSessions.length ? pastSessions.map((session) => (_jsxs("article", { className: styles.sessionItem, children: [_jsx("div", { className: styles.sessionIcon, children: session.sessionType === 'ONLINE' ? _jsx(Monitor, { size: 18 }) : _jsx(MapPin, { size: 18 }) }), _jsxs("div", { className: styles.sessionInfo, children: [_jsx("strong", { children: session.topic }), _jsxs("span", { children: [formatDate(session.date), " - ", formatDuration(session.duration), " - ", session.location || titleCase(session.sessionType)] })] }), _jsxs("div", { className: styles.participantCount, children: [_jsx(Users, { size: 16 }), " ", session.participants?.length ?? 0] })] }, session.id))) : _jsx("p", { className: styles.emptyText, children: "No past study sessions yet." }) })] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("h3", { children: [_jsx(Clock3, { size: 22 }), " Availability"] }), _jsx("div", { className: styles.availabilityList, children: mergedAvailability.length ? mergedAvailability.map((slot) => (_jsxs("article", { className: styles.availabilityItem, children: [_jsx("strong", { children: formatDayOfWeek(slot.dayOfWeek) }), _jsxs("span", { children: [formatTime(slot.startTime), " - ", formatTime(slot.endTime)] })] }, slot.id))) : _jsx("p", { className: styles.emptyText, children: "No availability set." }) })] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("h3", { children: [_jsx(Users, { size: 22 }), " Connected Study Buddies"] }), _jsx("div", { className: styles.buddiesList, children: displayedBuddyIds.length ? displayedBuddyIds.map((buddyId) => {
+    return (_jsxs("main", { className: styles.page, children: [_jsxs("header", { className: styles.header, children: [_jsx("h1", { children: "My Profile" }), _jsx("p", { children: "Manage your profile and view your study activity" })] }), profileError && _jsx("div", { className: styles.errorBanner, children: profileError }), _jsxs("section", { className: styles.profileCard, children: [_jsx("div", { className: styles.avatar, children: initials }), _jsx("div", { className: styles.profileInfo, children: isEditing ? (_jsxs("div", { className: styles.basicInfoForm, children: [_jsxs("label", { children: ["Full Name", _jsx("input", { value: editBasicInfo.fullName, onChange: (e) => setEditBasicInfo({ ...editBasicInfo, fullName: e.target.value }), placeholder: "Your full name" })] }), _jsxs("label", { children: ["Email", _jsx("input", { value: editBasicInfo.email, disabled: true })] }), _jsxs("label", { children: ["University", _jsx("input", { value: editBasicInfo.university, onChange: (e) => setEditBasicInfo({ ...editBasicInfo, university: e.target.value }), placeholder: "Your university" })] }), _jsxs("label", { children: ["Academic Year", _jsx("input", { value: editBasicInfo.academicYear, onChange: (e) => setEditBasicInfo({ ...editBasicInfo, academicYear: e.target.value }), placeholder: "e.g. Junior" })] })] })) : (_jsxs(_Fragment, { children: [_jsx("h2", { children: fullName }), _jsx("p", { className: styles.email, children: user?.email }), _jsx("p", { className: styles.bio, children: generatedBio }), _jsxs("div", { className: styles.profileMeta, children: [_jsxs("span", { children: [_jsx(MapPin, { size: 14 }), user?.university || 'University not set'] }), _jsxs("span", { children: [_jsx(GraduationCap, { size: 14 }), user?.academicYear || 'Academic year not set'] }), _jsxs("span", { children: [_jsx(BookOpen, { size: 14 }), courses.length ? `${courses.length} courses` : 'No courses yet'] })] })] })) }), isEditing ? (_jsxs("div", { className: styles.profileActions, children: [_jsxs("button", { className: styles.cancelProfileButton, onClick: cancelEditing, children: [_jsx(X, { size: 14 }), " Cancel"] }), _jsxs("button", { className: styles.editProfileButton, onClick: handleSaveProfile, disabled: savingProfile, children: [_jsx(Save, { size: 14 }), " ", savingProfile ? 'Saving...' : 'Save Profile'] })] })) : (_jsxs("button", { className: styles.editProfileButton, onClick: startEditing, children: [_jsx(Edit3, { size: 14 }), " Edit Profile"] }))] }), _jsxs("div", { className: styles.twoColumnGrid, children: [_jsxs("section", { className: styles.squareCard, children: [_jsxs("h3", { children: [_jsx(BookOpen, { size: 22 }), " Shared Courses"] }), _jsx("div", { className: styles.coursesList, children: (isEditing ? editCourses : courses).length ? (isEditing ? editCourses : courses).map((course) => (_jsxs("article", { className: styles.courseItem, children: [_jsxs("div", { children: [_jsx("strong", { children: course.name }), _jsxs("span", { children: [course.code, course.term ? ` - ${course.term}` : ''] })] }), isEditing && (_jsx("button", { className: styles.iconButton, onClick: () => setEditCourses((prev) => prev.filter((c) => c.code !== course.code)), children: _jsx(Trash2, { size: 14 }) }))] }, course.id ?? course.code))) : _jsx("p", { className: styles.emptyText, children: "No courses added yet." }) }), isEditing && (_jsxs("div", { className: styles.picker, children: [_jsxs("label", { children: [_jsx(Search, { size: 13 }), " Find a course by name or code"] }), _jsxs("div", { className: styles.searchRow, children: [_jsx("input", { value: courseQuery, onChange: (e) => setCourseQuery(e.target.value), placeholder: "Search course name" }), _jsx("input", { value: customCourseCode, onChange: (e) => setCustomCourseCode(e.target.value), placeholder: "Code" }), _jsx("button", { type: "button", onClick: addCustomCourse, children: _jsx(Plus, { size: 16 }) })] }), _jsx("div", { className: styles.suggestionList, children: courseMatches.length ? courseMatches.map((course) => (_jsxs("button", { type: "button", onClick: () => addCourseToEdit(course), children: [_jsx("span", { children: course.code }), " ", course.name] }, course.code))) : _jsx("p", { children: courseQuery ? 'No matching courses.' : 'Start typing to search.' }) })] }))] }), _jsxs("section", { className: styles.squareCard, children: [_jsxs("h3", { children: [_jsx(Tag, { size: 22 }), " Study Topics"] }), _jsx("div", { className: styles.topicsList, children: (isEditing ? editTopics : topics).length ? (isEditing ? editTopics : topics).map((topic) => (_jsxs("span", { className: styles.topicTag, children: [topic.name, isEditing && (_jsx("button", { onClick: () => setEditTopics((prev) => prev.filter((t) => t.name !== topic.name)), children: _jsx(Trash2, { size: 11 }) }))] }, topic.id ?? topic.name))) : _jsx("p", { className: styles.emptyText, children: "No study topics added yet." }) }), isEditing && (_jsxs("div", { className: styles.picker, children: [_jsxs("label", { children: [_jsx(Search, { size: 13 }), " Pick a topic or type your own"] }), _jsxs("div", { className: styles.searchRowSingle, children: [_jsx("input", { value: topicQuery, onChange: (e) => setTopicQuery(e.target.value), onKeyDown: (e) => e.key === 'Enter' && addTopicToEdit(topicQuery), placeholder: "Search topics" }), _jsx("button", { type: "button", onClick: () => addTopicToEdit(topicQuery), children: _jsx(Plus, { size: 16 }) })] }), _jsx("div", { className: styles.suggestionList, children: topicMatches.length ? topicMatches.map((topic) => (_jsx("button", { type: "button", onClick: () => addTopicToEdit(topic.name), children: topic.name }, topic.name))) : _jsx("p", { children: topicQuery ? 'No matching topics.' : 'Start typing to search.' }) })] }))] })] }), _jsxs("section", { className: styles.preferencesCard, children: [_jsxs("h3", { children: [_jsx(Clock3, { size: 22 }), " Study Preferences"] }), isEditing ? (_jsxs("div", { className: styles.editPrefForm, children: [_jsxs("label", { children: ["Study Pace", _jsxs("select", { value: editPrefs.studyPace, onChange: (e) => setEditPrefs({ ...editPrefs, studyPace: e.target.value }), children: [_jsx("option", { value: "", children: "Select pace" }), PACE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("label", { children: ["Study Mode", _jsxs("select", { value: editPrefs.studyMode, onChange: (e) => setEditPrefs({ ...editPrefs, studyMode: e.target.value }), children: [_jsx("option", { value: "", children: "Select mode" }), MODE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("label", { children: ["Group Size", _jsxs("select", { value: editPrefs.groupSize, onChange: (e) => setEditPrefs({ ...editPrefs, groupSize: e.target.value }), children: [_jsx("option", { value: "", children: "Select group size" }), SIZE_OPTIONS.map((opt) => _jsx("option", { value: opt.value, children: opt.label }, opt.value))] })] }), _jsxs("div", { className: styles.optionGroup, children: [_jsx("span", { children: "Study Styles" }), _jsx("div", { className: styles.chipGroup, children: STYLE_OPTIONS.map((opt) => (_jsxs("button", { className: editPrefs.studyStyles.includes(opt.value) ? styles.optionChipActive : styles.optionChip, type: "button", onClick: () => toggleUniqueOption('studyStyles', opt.value), children: [editPrefs.studyStyles.includes(opt.value) && _jsx(Check, { size: 12 }), opt.label] }, opt.value))) })] }), _jsxs("div", { className: styles.optionGroup, children: [_jsx("span", { children: "Preferred Times" }), _jsx("div", { className: styles.chipGroup, children: TIME_OPTIONS.map((opt) => (_jsxs("button", { className: editPrefs.preferredTimes.includes(opt.value) ? styles.optionChipActive : styles.optionChip, type: "button", onClick: () => toggleUniqueOption('preferredTimes', opt.value), children: [editPrefs.preferredTimes.includes(opt.value) && _jsx(Check, { size: 12 }), opt.label] }, opt.value))) })] }), _jsxs("label", { children: ["Session Length", _jsxs("select", { value: editPrefs.sessionLength, onChange: (e) => setEditPrefs({ ...editPrefs, sessionLength: e.target.value }), children: [_jsx("option", { value: "", children: "Optional" }), LENGTH_OPTIONS.map((opt) => _jsx("option", { value: opt, children: opt }, opt))] })] })] })) : (_jsxs("div", { className: styles.preferenceGrid, children: [_jsxs("article", { children: [_jsx("span", { children: "Study Pace" }), _jsx("strong", { children: labelFor(profile.studyPace, PACE_OPTIONS) })] }), _jsxs("article", { children: [_jsx("span", { children: "Study Mode" }), _jsx("strong", { children: labelFor(profile.studyMode, MODE_OPTIONS) })] }), _jsxs("article", { children: [_jsx("span", { children: "Group Size" }), _jsx("strong", { children: getGroupSizeLabel(profile.groupSize) })] }), _jsxs("article", { children: [_jsx("span", { children: "Study Styles" }), _jsx("strong", { children: displayedStudyStyles })] }), _jsxs("article", { children: [_jsx("span", { children: "Preferred Times" }), _jsx("strong", { children: preferredTimes })] }), _jsxs("article", { children: [_jsx("span", { children: "Session Length" }), _jsx("strong", { children: profile.sessionLength || 'Not set' })] })] }))] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("div", { className: styles.cardTitleRow, children: [_jsxs("h3", { children: [_jsx(CalendarDays, { size: 22 }), " Past Study Sessions"] }), _jsxs("span", { children: [pastSessions.length, " total sessions"] })] }), _jsx("div", { className: styles.sessionsList, children: pastSessions.length ? pastSessions.map((session) => (_jsxs("article", { className: styles.sessionItem, children: [_jsx("div", { className: styles.sessionIcon, children: session.sessionType === 'ONLINE' ? _jsx(Monitor, { size: 18 }) : _jsx(MapPin, { size: 18 }) }), _jsxs("div", { className: styles.sessionInfo, children: [_jsx("strong", { children: session.topic }), _jsxs("span", { children: [formatDate(session.date), " - ", formatDuration(session.duration), " - ", session.location || titleCase(session.sessionType)] })] }), _jsxs("div", { className: styles.participantCount, children: [_jsx(Users, { size: 16 }), " ", session.participants?.length ?? 0] })] }, session.id))) : _jsx("p", { className: styles.emptyText, children: "No past study sessions yet." }) })] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("h3", { children: [_jsx(Clock3, { size: 22 }), " Availability"] }), _jsx("div", { className: styles.availabilityList, children: mergedAvailability.length ? mergedAvailability.map((slot) => (_jsxs("article", { className: styles.availabilityItem, children: [_jsx("strong", { children: formatDayOfWeek(slot.dayOfWeek) }), _jsxs("span", { children: [formatTime(slot.startTime), " - ", formatTime(slot.endTime)] })] }, slot.id))) : _jsx("p", { className: styles.emptyText, children: "No availability set." }) })] }), _jsxs("section", { className: styles.listCard, children: [_jsxs("h3", { children: [_jsx(Users, { size: 22 }), " Connected Study Buddies"] }), _jsx("div", { className: styles.buddiesList, children: displayedBuddyIds.length ? displayedBuddyIds.map((buddyId) => {
                             const buddy = usersById.get(buddyId);
                             const buddyName = buddy ? `${buddy.firstName} ${buddy.lastName}` : 'Study Buddy';
                             const buddyInitials = buddy

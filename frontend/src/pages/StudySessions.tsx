@@ -52,16 +52,26 @@ const CREATE_STUDY_SESSION = gql`
 const UPDATE_STUDY_SESSION = gql`
   mutation UpdateStudySession(
     $sessionId: ID!
+    $topic: String
+    $description: String
+    $date: String
+    $duration: Int
+    $sessionType: String
     $meetingLink: String
     $location: String
     $participantIds: [ID!]
   ) {
     updateSession(
       sessionId: $sessionId
+      topic: $topic
+      description: $description
+      date: $date
+      duration: $duration
+      sessionType: $sessionType
       meetingLink: $meetingLink
       location: $location
       participantIds: $participantIds
-    ) { id topic status meetingLink location
+    ) { id topic description date duration sessionType status meetingLink location
         participants { id sessionId userId status joinedAt } }
   }
 `;
@@ -99,6 +109,12 @@ const defaultDate = () => {
   return d.toISOString().slice(0, 16);
 };
 
+const toDateTimeInputValue = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return defaultDate();
+  return date.toISOString().slice(0, 16);
+};
+
 /* ═══════════════════════════════════════════════════════════ */
 export default function StudySessions() {
   const { user } = useAuth();
@@ -120,6 +136,11 @@ export default function StudySessions() {
 
   /* edit modal state */
   const [editSession, setEditSession] = useState<StudySessionItem | null>(null);
+  const [editTopic, setEditTopic] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDate, setEditDate] = useState(defaultDate());
+  const [editDuration, setEditDuration] = useState('120');
+  const [editSessionType, setEditSessionType] = useState<'ONLINE' | 'IN_PERSON'>('ONLINE');
   const [editMeetingLink, setEditMeetingLink] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editParticipants, setEditParticipants] = useState<string[]>([]);
@@ -150,6 +171,21 @@ export default function StudySessions() {
     () => (data?.getMyBuddies ?? []).map(id => usersById.get(id)).filter((u): u is UserSummary => Boolean(u)),
     [data?.getMyBuddies, usersById]
   );
+  const editParticipantOptions = useMemo(() => {
+    const byId = new Map<string, UserSummary>();
+
+    matchedParticipants.forEach((participant) => {
+      byId.set(participant.id, participant);
+    });
+
+    editSession?.participants.forEach((participant) => {
+      if (participant.userId === editSession.creatorId) return;
+      const userSummary = usersById.get(participant.userId);
+      if (userSummary) byId.set(userSummary.id, userSummary);
+    });
+
+    return Array.from(byId.values());
+  }, [editSession, matchedParticipants, usersById]);
 
   /* session buckets */
   const allMySessions = data?.getMySessions ?? [];
@@ -229,9 +265,14 @@ export default function StudySessions() {
 
   const openEditModal = (session: StudySessionItem) => {
     setEditSession(session);
+    setEditTopic(session.topic ?? '');
+    setEditDescription(session.description ?? '');
+    setEditDate(toDateTimeInputValue(session.date));
+    setEditDuration(String(session.duration || 120));
+    setEditSessionType(session.sessionType.toUpperCase() === 'IN_PERSON' ? 'IN_PERSON' : 'ONLINE');
     setEditMeetingLink(session.meetingLink ?? '');
     setEditLocation(session.location ?? '');
-    setEditParticipants(session.participants.map(p => p.userId));
+    setEditParticipants(session.participants.filter(p => p.userId !== session.creatorId).map(p => p.userId));
     setEditError('');
   };
 
@@ -259,13 +300,20 @@ export default function StudySessions() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setEditError('');
     if (!editSession) return;
-    const isOnline = editSession.sessionType.toUpperCase() === 'ONLINE';
+    const isOnline = editSessionType === 'ONLINE';
+    if (!editTopic.trim()) return setEditError('Add a session topic.');
+    if (Number(editDuration) <= 0) return setEditError('Choose a valid duration.');
     if (isOnline && !editMeetingLink.trim()) return setEditError('Add a meeting link.');
     if (!isOnline && !editLocation.trim()) return setEditError('Add a location.');
     try {
       await updateSession({
         variables: {
           sessionId: editSession.id,
+          topic: editTopic.trim(),
+          description: editDescription.trim() || null,
+          date: new Date(editDate).toISOString(),
+          duration: Number(editDuration),
+          sessionType: editSessionType,
           meetingLink: isOnline ? editMeetingLink.trim() : null,
           location: !isOnline ? editLocation.trim() : null,
           participantIds: editParticipants,
@@ -720,7 +768,7 @@ export default function StudySessions() {
       {/* Edit Session Modal */}
       {editSession && (
         <div className={styles.detailsOverlay} onClick={() => setEditSession(null)}>
-          <div className={styles.detailsModal} onClick={(e) => e.stopPropagation()}>
+          <div className={`${styles.detailsModal} ${styles.editModal}`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.detailsHeader}>
               <h2>Edit — {editSession.topic}</h2>
               <button className={styles.closeBtn} onClick={() => setEditSession(null)}>×</button>
@@ -728,40 +776,101 @@ export default function StudySessions() {
 
             <form onSubmit={handleEditSubmit}>
               <div className={styles.editFormBody}>
-                {/* Location / Link */}
+                <div className={styles.editGrid}>
+                  <label className={styles.editLabel}>
+                    Topic
+                    <input
+                      className={styles.editInput}
+                      value={editTopic}
+                      onChange={e => setEditTopic(e.target.value)}
+                      placeholder="Session topic"
+                    />
+                  </label>
+
+                  <label className={styles.editLabel}>
+                    Date and Time
+                    <input
+                      className={styles.editInput}
+                      type="datetime-local"
+                      value={editDate}
+                      onChange={e => setEditDate(e.target.value)}
+                    />
+                  </label>
+
+                  <label className={styles.editLabel}>
+                    Duration
+                    <select
+                      className={styles.editInput}
+                      value={editDuration}
+                      onChange={e => setEditDuration(e.target.value)}
+                    >
+                      <option value="60">1 hour</option>
+                      <option value="90">1.5 hours</option>
+                      <option value="120">2 hours</option>
+                      <option value="180">3 hours</option>
+                    </select>
+                  </label>
+
+                  <label className={styles.editLabel}>
+                    Session Type
+                    <select
+                      className={styles.editInput}
+                      value={editSessionType}
+                      onChange={e => setEditSessionType(e.target.value as 'ONLINE' | 'IN_PERSON')}
+                    >
+                      <option value="ONLINE">Online</option>
+                      <option value="IN_PERSON">In-Person</option>
+                    </select>
+                  </label>
+                </div>
+
                 <label className={styles.editLabel}>
-                  {editSession.sessionType.toUpperCase() === 'ONLINE' ? 'Meeting Link' : 'Location'}
+                  Description
+                  <textarea
+                    className={styles.editTextarea}
+                    value={editDescription}
+                    onChange={e => setEditDescription(e.target.value)}
+                    placeholder="Notes for your buddies"
+                  />
+                </label>
+
+                <label className={styles.editLabel}>
+                  {editSessionType === 'ONLINE' ? 'Meeting Link' : 'Location'}
                   <input
                     className={styles.editInput}
-                    value={editSession.sessionType.toUpperCase() === 'ONLINE' ? editMeetingLink : editLocation}
+                    value={editSessionType === 'ONLINE' ? editMeetingLink : editLocation}
                     onChange={e =>
-                      editSession.sessionType.toUpperCase() === 'ONLINE'
+                      editSessionType === 'ONLINE'
                         ? setEditMeetingLink(e.target.value)
                         : setEditLocation(e.target.value)
                     }
-                    placeholder={editSession.sessionType.toUpperCase() === 'ONLINE' ? 'https://zoom.us/…' : 'Library Room 204'}
+                    placeholder={editSessionType === 'ONLINE' ? 'https://zoom.us/...' : 'Library Room 204'}
                   />
                 </label>
 
                 {/* Add participants */}
                 <div className={styles.editInviteSection}>
                   <p className={styles.editInviteTitle}>Participants</p>
-                  {matchedParticipants.length > 0 ? (
+                  {editParticipantOptions.length > 0 ? (
                     <div className={styles.inviteList}>
-                      {matchedParticipants.map(u => {
-                        const alreadyIn = editSession.participants.some(p => p.userId === u.id && p.status !== 'DECLINED');
+                      {editParticipantOptions.map(u => {
+                        const existingParticipant = editSession.participants.find(p => p.userId === u.id && p.status !== 'DECLINED');
+                        const isSelected = editParticipants.includes(u.id);
                         return (
                           <label className={styles.inviteRow} key={u.id}>
                             <span className={styles.avatar}>{`${u.firstName[0]}${u.lastName[0]}`.toUpperCase()}</span>
                             <span>
                               <strong>{u.firstName} {u.lastName}</strong>
-                              <small>{alreadyIn ? '✓ Already invited' : u.university || u.email || 'Matched study buddy'}</small>
+                              <small>
+                                {existingParticipant
+                                  ? isSelected ? `In session - ${existingParticipant.status.toLowerCase()}` : 'Will be removed'
+                                  : u.university || u.email || 'Matched study buddy'}
+                              </small>
                             </span>
                             <input
                               type="checkbox"
-                              checked={editParticipants.includes(u.id)}
+                              checked={isSelected}
                               onChange={() => toggleEditParticipant(u.id)}
-                              disabled={alreadyIn}
                             />
                           </label>
                         );

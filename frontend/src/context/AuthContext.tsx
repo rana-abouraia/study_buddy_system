@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (token: string, user: User) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -40,6 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser);
   };
 
+  const updateUser = (updatedUser: User) => {
+    localStorage.setItem('hivemind_user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   const logout = () => {
     localStorage.removeItem('hivemind_token');
     localStorage.removeItem('hivemind_user');
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!token && !!user,
         isLoading,
         login,
+        updateUser,
         logout,
       }}
     >

@@ -17,6 +17,7 @@ const UPDATE_PREFERENCES = gql `
     }
   }
 `;
+/* ── Option types ────────────────────────────────────────── */
 /* ═══════════════════════════════════════════════════════════ */
 export default function StudyPreferences() {
     const navigate = useNavigate();

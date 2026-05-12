@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SEND_MESSAGE } from '../graphql/mutations';
 import { GET_CONVERSATION_MESSAGES, GET_MESSAGES_PAGE_DATA } from '../graphql/queries';
-import styles from './Messages.module.css';
+import styles from '../styles/pages/Messages.module.css';
 const formatName = (user) => user ? `${user.firstName} ${user.lastName}` : 'Study Buddy';
 const initialsFor = (user) => {
     if (!user)

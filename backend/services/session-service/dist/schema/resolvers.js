@@ -185,7 +185,7 @@ exports.resolvers = {
             });
             return participant;
         },
-        updateSession: async (_, { sessionId, meetingLink, location, participantIds }, { userId }) => {
+        updateSession: async (_, { sessionId, topic, description, date, duration, sessionType, meetingLink, location, participantIds }, { userId }) => {
             if (!userId)
                 throw new Error('Not authenticated');
             const session = await index_1.prisma.studySession.findUnique({
@@ -202,7 +202,23 @@ exports.resolvers = {
             if (computeEffectiveStatus(session) === 'COMPLETED') {
                 throw new Error('Cannot update a completed session');
             }
-            const isOnline = session.sessionType === 'ONLINE';
+            const normalizedTopic = topic === undefined ? session.topic : topic?.trim();
+            const normalizedDescription = description === undefined ? session.description : (description?.trim() || null);
+            const normalizedSessionType = sessionType?.trim() || session.sessionType;
+            const normalizedDate = date ? new Date(date) : session.date;
+            const normalizedDuration = duration ?? session.duration;
+            if (!normalizedTopic)
+                throw new Error('Topic is required');
+            if (!VALID_SESSION_TYPES.includes(normalizedSessionType)) {
+                throw new Error('Session type must be ONLINE or IN_PERSON');
+            }
+            if (normalizedDuration <= 0)
+                throw new Error('Duration must be greater than 0');
+            if (isNaN(normalizedDate.getTime()))
+                throw new Error('Invalid date format');
+            if (normalizedDate < new Date())
+                throw new Error('Session date must be in the future');
+            const isOnline = normalizedSessionType === 'ONLINE';
             const normalizedMeetingLink = meetingLink?.trim() || null;
             const normalizedLocation = location?.trim() || null;
             if (isOnline && !normalizedMeetingLink) {
@@ -246,6 +262,11 @@ exports.resolvers = {
             const updated = await index_1.prisma.studySession.update({
                 where: { id: sessionId },
                 data: {
+                    topic: normalizedTopic,
+                    description: normalizedDescription,
+                    date: normalizedDate,
+                    duration: normalizedDuration,
+                    sessionType: normalizedSessionType,
                     meetingLink: isOnline ? normalizedMeetingLink : null,
                     location: isOnline ? null : normalizedLocation
                 },

@@ -56,6 +56,24 @@ export const REGISTER_MUTATION = gql `
   }
   ${USER_FIELDS}
 `;
+export const UPDATE_USER_MUTATION = gql `
+  mutation UpdateUser(
+    $firstName: String
+    $lastName: String
+    $university: String
+    $academicYear: String
+  ) {
+    updateUser(
+      firstName: $firstName
+      lastName: $lastName
+      university: $university
+      academicYear: $academicYear
+    ) {
+      ...UserFields
+    }
+  }
+  ${USER_FIELDS}
+`;
 export const GET_ME = gql `
   query Me {
     me {
@@ -150,6 +168,165 @@ export const SEND_MESSAGE = gql `
       senderId
       content
       createdAt
+    }
+  }
+`;
+export const UPDATE_MATCHING_SERVICE_PROFILE = gql `
+  mutation UpdateMatchingProfile($input: UpdateMatchProfileInput!) {
+    updateMatchProfile(input: $input) {
+      userId
+      studyPace
+      studyMode
+      groupSize
+      studyStyle
+    }
+  }
+`;
+export const RECALCULATE_MATCHES = gql `
+  mutation RecalculateMatches {
+    recalculateMatches {
+      id
+      userId
+      candidateUserId
+      compatibility
+      reasons
+    }
+  }
+`;
+export const ADD_AVAILABILITY_SLOT = gql `
+  mutation AddAvailabilitySlot($dayOfWeek: Int!, $startTime: String!, $endTime: String!, $isRecurring: Boolean) {
+    addAvailabilitySlot(dayOfWeek: $dayOfWeek, startTime: $startTime, endTime: $endTime, isRecurring: $isRecurring) {
+      id
+      dayOfWeek
+      startTime
+      endTime
+      isRecurring
+    }
+  }
+`;
+export const DELETE_AVAILABILITY_SLOT = gql `
+  mutation DeleteAvailabilitySlot($id: ID!) {
+    deleteAvailabilitySlot(id: $id)
+  }
+`;
+// ==================== PROFILE SERVICE MUTATIONS ====================
+export const UPDATE_MATCH_PROFILE = gql `
+  mutation UpdatePreferences($input: UpdatePreferencesInput!) {
+    updatePreferences(input: $input) {
+      id
+      userId
+      studyPace
+      studyMode
+      groupSize
+      studyStyles
+      preferredTimes
+      sessionLength
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const ADD_COURSE = gql `
+  mutation AddCourse($input: CourseInput!) {
+    addCourse(input: $input) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const REPLACE_COURSES = gql `
+  mutation ReplaceCourses($courses: [CourseInput!]!) {
+    replaceCourses(courses: $courses) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const REMOVE_COURSE = gql `
+  mutation RemoveCourse($courseId: ID!) {
+    removeCourse(courseId: $courseId) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const ADD_TOPIC = gql `
+  mutation AddTopic($input: TopicInput!) {
+    addTopic(input: $input) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const REPLACE_TOPICS = gql `
+  mutation ReplaceTopics($topics: [TopicInput!]!) {
+    replaceTopics(topics: $topics) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
+    }
+  }
+`;
+export const REMOVE_TOPIC = gql `
+  mutation RemoveTopic($topicId: ID!) {
+    removeTopic(topicId: $topicId) {
+      courses {
+        id
+        name
+        code
+        term
+      }
+      topics {
+        id
+        name
+      }
     }
   }
 `;
