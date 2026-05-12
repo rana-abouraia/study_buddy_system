@@ -224,42 +224,6 @@ export default function FindBuddies() {
     const currentUserId = user.id;
     let cancelled = false;
 
-    async function loadMatchProfiles() {
-      try {
-        const mine = await apolloClient.query<{ getMatchProfile: MatchProfileSummary | null }>({
-          query: GET_MATCH_PROFILE,
-          variables: { userId: currentUserId },
-          fetchPolicy: 'network-only',
-        });
-
-        if (!cancelled) setMyMatchProfile(mine.data.getMatchProfile ?? null);
-      } catch {
-        if (!cancelled) setMyMatchProfile(null);
-      }
-
-      const nextProfiles: Record<string, MatchProfileSummary | null> = {};
-
-      await Promise.all(
-        matches.map(async (match) => {
-          try {
-            const result = await apolloClient.query<{ getMatchProfile: MatchProfileSummary | null }>({
-              query: GET_MATCH_PROFILE,
-              variables: { userId: match.candidateUserId },
-              fetchPolicy: 'network-only',
-            });
-
-            nextProfiles[match.candidateUserId] = result.data.getMatchProfile ?? null;
-          } catch {
-            nextProfiles[match.candidateUserId] = null;
-          }
-        })
-      );
-
-      if (!cancelled) setMatchProfiles(nextProfiles);
-    }
-
-    loadMatchProfiles();
-
     return () => {
       cancelled = true;
     };
