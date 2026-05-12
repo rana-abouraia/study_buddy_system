@@ -13,7 +13,7 @@ import Login            from './pages/Login';
 import Register         from './pages/Register';
 import Dashboard        from './pages/Dashboard';
 import Availability     from './pages/Availability';
-import FindBuddies      from './pages/FindBuddies';
+import FindBuddies      from './pages/FindBuddie';
 import Connections      from './pages/Connections';
 import StudySessions    from './pages/StudySessions';
 import Messages         from './pages/Messages';
