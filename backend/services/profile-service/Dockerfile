@@ -12,8 +12,8 @@ RUN npm install --legacy-peer-deps
 # Copy full source
 COPY . .
 
-# Prisma generate (only if exists)
-RUN DATABASE_URL="postgresql://user:pass@ep-xxx.neon.tech/hivemind-user?branch=profile-db&sslmode=require" npx prisma generate
+# Prisma generate only needs a syntactically valid URL at build time.
+RUN DATABASE_URL="postgresql://user:pass@localhost:5432/app" npx prisma generate
 
 # Build TypeScript (only if TS exists)
 RUN if [ -f "tsconfig.json" ]; then npm run build; fi

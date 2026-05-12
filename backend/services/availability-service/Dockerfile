@@ -12,8 +12,8 @@ RUN npm install --legacy-peer-deps
 # Copy full source
 COPY . .
 
-# Prisma generate (only if exists)
-RUN DATABASE_URL="postgresql://neondb_owner:npg_SuLR9bZ7wPNB@ep-lingering-salad-an8b9l80-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require" npx prisma generate
+# Prisma generate only needs a syntactically valid URL at build time.
+RUN DATABASE_URL="postgresql://user:pass@localhost:5432/app" npx prisma generate
 
 # Build TypeScript (only if TS exists)
 RUN if [ -f "tsconfig.json" ]; then npm run build; fi
