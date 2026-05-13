@@ -7,10 +7,13 @@ import type {
   UserPreferencesUpdatedPayload
 } from "../types/events.js";
 
-const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || "kafka:9092")
-  .split(",")
-  .map((b) => b.trim());
+const brokers = process.env.KAFKA_BROKERS
+  ? process.env.KAFKA_BROKERS.split(",").map((b) => b.trim())
+  : process.env.KAFKA_BROKER
+    ? process.env.KAFKA_BROKER.split(",").map((b) => b.trim())
+    : [];
 
+    
 const kafka = new Kafka({
   clientId: process.env.KAFKA_CLIENT_ID || "matching-service",
   brokers
@@ -67,8 +70,12 @@ function mapDayOfWeek(day: number | string): string {
 }
 
 export async function startConsumer() {
-  await consumer.connect();
+  if (brokers.length === 0) {
+    console.log("[matching-service] Kafka consumer disabled");
+    return;
+  }
 
+  await consumer.connect();
   await consumer.subscribe({
     topic: TOPICS.USER_PREFERENCES_UPDATED,
     fromBeginning: false

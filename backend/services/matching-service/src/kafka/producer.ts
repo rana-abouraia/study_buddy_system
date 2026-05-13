@@ -8,9 +8,9 @@ import type {
   MatchFoundPayload
 } from "../types/events.js";
 
-const brokers = (process.env.KAFKA_BROKERS || "kafka:9092")
-  .split(",")
-  .map((b) => b.trim());
+const brokers = process.env.KAFKA_BROKERS
+  ? process.env.KAFKA_BROKERS.split(",").map((b) => b.trim())
+  : []; 
 
 const kafka = new Kafka({
   clientId: process.env.KAFKA_CLIENT_ID || "matching-service",
@@ -20,8 +20,14 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 
 let producerConnected = false;
+export const kafkaEnabled = brokers.length > 0;
 
 export async function connectProducer() {
+   if (!kafkaEnabled) {
+    console.log("[matching-service] Kafka producer disabled");
+    return;
+  }
+
   if (!producerConnected) {
     await producer.connect();
     producerConnected = true;
@@ -30,6 +36,11 @@ export async function connectProducer() {
 }
 
 export async function publishMatchFoundEvent(payload: MatchFoundPayload) {
+  if (!kafkaEnabled) {
+    console.log("[matching-service] Kafka producer disabled");
+    return;
+  }
+
   const event: BaseEvent<MatchFoundPayload> = {
     eventName: TOPICS.MATCH_FOUND,
     timestamp: new Date().toISOString(),
@@ -45,8 +56,14 @@ export async function publishMatchFoundEvent(payload: MatchFoundPayload) {
 }
 
 export async function publishBuddyRequestReceived(
+  
   payload: BuddyRequestReceivedPayload
 ) {
+  if (!kafkaEnabled) {
+    console.log("[matching-service] Kafka producer disabled");
+    return;
+  }
+
   const event: BaseEvent<BuddyRequestReceivedPayload> = {
     eventName: TOPICS.BUDDY_REQUEST_RECEIVED,
     timestamp: new Date().toISOString(),
@@ -64,6 +81,11 @@ export async function publishBuddyRequestReceived(
 export async function publishBuddyRequestAccepted(
   payload: BuddyRequestAcceptedPayload
 ) {
+  if (!kafkaEnabled) {
+    console.log("[matching-service] Kafka producer disabled");
+    return;
+  }
+
   const event: BaseEvent<BuddyRequestAcceptedPayload> = {
     eventName: TOPICS.BUDDY_REQUEST_ACCEPTED,
     timestamp: new Date().toISOString(),
