@@ -48,6 +48,7 @@ async function main() {
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,
+    introspection: true,
   });
 
   const port = Number(process.env.PORT) || 4006;

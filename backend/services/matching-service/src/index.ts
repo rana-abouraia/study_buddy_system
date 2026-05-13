@@ -24,7 +24,8 @@ async function bootstrap() {
 
     const server = new ApolloServer<Context>({
       typeDefs,
-      resolvers
+      resolvers,
+      introspection: true,
     });
 
     const port = Number(process.env.PORT || 4004);
