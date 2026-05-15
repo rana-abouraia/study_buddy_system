@@ -27,6 +27,7 @@ async function main() {
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,
+     introspection: true,
   });
 
   const { url } = await startStandaloneServer(server, {
@@ -49,9 +50,6 @@ async function main() {
     },
   });
 
-<<<<<<< HEAD
-  console.log(`Messaging service ready at: ${url}`);
-=======
   console.log(`🚀 Messaging service ready at: ${url}`);
 
   try {
@@ -59,7 +57,6 @@ async function main() {
   } catch (error) {
     console.error('[messaging-service] Failed to start Kafka consumer:', error);
   }
->>>>>>> main
 }
 
 main();

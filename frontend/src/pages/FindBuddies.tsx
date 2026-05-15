@@ -1,68 +1,25 @@
-﻿import { useApolloClient, useMutation, useQuery } from '@apollo/client';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GET_COURSES_AND_TOPICS, GET_FIND_BUDDIES_DATA, GET_MATCH_PROFILE } from '../graphql/queries';
 import { SEND_BUDDY_REQUEST } from '../graphql/mutations';
-import styles from './FindBuddies.module.css';
+import type {
+  FindBuddiesData,
+  MatchAvailabilitySlot,
+  MatchFilter,
+  MatchProfileSummary,
+  UserProfileSummary,
+} from '../types';
+import styles from '../styles/pages/FindBuddies.module.css';
 
-type MatchFilter = 'all' | 'high' | 'shared' | 'available';
-
-interface CourseItem {
-  id: string;
-  name: string;
-}
-
-interface MatchResult {
-  id: string;
-  candidateUserId: string;
-  compatibility: number;
-  reasons: string[];
-}
-
-interface BuddyRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface UserSummary {
-  id: string;
-  firstName: string;
-  lastName: string;
-  university?: string;
-  academicYear?: string;
-}
-
-interface MatchAvailabilitySlot {
-  id: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-}
-
-interface MatchProfileSummary {
-  userId: string;
-  studyPace?: string | null;
-  studyMode?: string | null;
-  groupSize?: number | null;
-  studyStyle?: string | null;
-  availabilitySlots: MatchAvailabilitySlot[];
-}
-
-interface FindBuddiesData {
-  getRecommendedMatches: MatchResult[];
-  getIncomingBuddyRequests: BuddyRequest[];
-  getOutgoingBuddyRequests: BuddyRequest[];
-  getMyBuddies: string[];
-  meProfile?: {
-    courses: CourseItem[];
-  };
-  getAllUsers: UserSummary[];
-}
+// Mapping from string (profile-service) to number (for display)
+const GROUP_SIZE_STRING_TO_NUMBER: Record<string, number> = {
+  'ONE_ON_ONE': 2,
+  'SMALL': 4,
+  'LARGE': 8,
+};
+const FIND_BUDDIES_MATCH_LIMIT = 100;
 
 export default function FindBuddies() {
   const { user } = useAuth();
@@ -74,26 +31,34 @@ export default function FindBuddies() {
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<MatchFilter>('all');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [matchProfiles, setMatchProfiles] = useState<Record<string, MatchProfileSummary | null>>({});
   const [myMatchProfile, setMyMatchProfile] = useState<MatchProfileSummary | null>(null);
+  const [profileMap, setProfileMap] = useState<Record<string, UserProfileSummary | null>>({});
+  const [myProfileSummary, setMyProfileSummary] = useState<UserProfileSummary | null>(null);
 
   // Listen for navigation from Dashboard
   useEffect(() => {
-    const state = location.state as { selectedMatchId?: string };
+    const state = location.state as { selectedMatchId?: string; selectedUserId?: string };
     if (state?.selectedMatchId) {
       setSelectedMatchId(state.selectedMatchId);
-      // Clear the state so it doesn't reopen on refresh
+      setSelectedUserId(null);
+      window.history.replaceState({}, document.title);
+    }
+    if (state?.selectedUserId) {
+      setSelectedUserId(state.selectedUserId);
+      setSelectedMatchId(null);
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
   const { data, loading, error, refetch } = useQuery<FindBuddiesData>(GET_FIND_BUDDIES_DATA, {
-    variables: { matchLimit: 24 },
+    variables: { matchLimit: FIND_BUDDIES_MATCH_LIMIT },
     fetchPolicy: 'cache-and-network',
   });
 
   const [sendRequest, { loading: sending }] = useMutation(SEND_BUDDY_REQUEST, {
-    refetchQueries: [{ query: GET_FIND_BUDDIES_DATA, variables: { matchLimit: 24 } }],
+    refetchQueries: [{ query: GET_FIND_BUDDIES_DATA, variables: { matchLimit: FIND_BUDDIES_MATCH_LIMIT } }],
     awaitRefetchQueries: true,
   });
 
@@ -139,6 +104,11 @@ export default function FindBuddies() {
     () => matches.find((match) => match.id === selectedMatchId) ?? null,
     [matches, selectedMatchId]
   );
+  const selectedCandidateId = selectedUserId ?? selectedMatch?.candidateUserId ?? null;
+  const selectedCandidateMatch = useMemo(
+    () => selectedMatch ?? matches.find((match) => match.candidateUserId === selectedCandidateId) ?? null,
+    [matches, selectedCandidateId, selectedMatch]
+  );
 
   useEffect(() => {
     if (!data?.meProfile || matches.length === 0) return;
@@ -150,28 +120,34 @@ export default function FindBuddies() {
 
     async function loadCourses() {
       const nextMap: Record<string, string[]> = {};
+      const nextProfiles: Record<string, UserProfileSummary | null> = {};
 
       await Promise.all(
         matches.map(async (match) => {
           try {
             const result = await apolloClient.query<{
-              getCoursesAndTopics: { courses: CourseItem[] } | null;
+              getCoursesAndTopics: UserProfileSummary | null;
             }>({
               query: GET_COURSES_AND_TOPICS,
               variables: { userId: match.candidateUserId },
               fetchPolicy: 'network-only',
             });
 
+            nextProfiles[match.candidateUserId] = result.data.getCoursesAndTopics ?? null;
             nextMap[match.candidateUserId] = (result.data.getCoursesAndTopics?.courses ?? [])
               .map((course) => course.name)
               .filter((name) => currentCourses.has(name.trim().toLowerCase()));
           } catch {
+            nextProfiles[match.candidateUserId] = null;
             nextMap[match.candidateUserId] = [];
           }
         })
       );
 
-      if (!cancelled) setCourseMap(nextMap);
+      if (!cancelled) {
+        setCourseMap(nextMap);
+        setProfileMap((current) => ({ ...current, ...nextProfiles }));
+      }
     }
 
     loadCourses();
@@ -182,15 +158,77 @@ export default function FindBuddies() {
   }, [apolloClient, data?.meProfile, matches]);
 
   useEffect(() => {
-    if (matches.length === 0) return;
+    if (!selectedUserId || profileMap[selectedUserId] !== undefined) return;
 
+    const targetUserId = selectedUserId;
+    let cancelled = false;
+
+    async function loadSelectedProfile() {
+      try {
+        const result = await apolloClient.query<{ getCoursesAndTopics: UserProfileSummary | null }>({
+          query: GET_COURSES_AND_TOPICS,
+          variables: { userId: targetUserId },
+          fetchPolicy: 'network-only',
+        });
+
+        if (!cancelled) {
+          setProfileMap((current) => ({
+            ...current,
+            [targetUserId]: result.data.getCoursesAndTopics ?? null,
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileMap((current) => ({ ...current, [targetUserId]: null }));
+        }
+      }
+    }
+
+    loadSelectedProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apolloClient, profileMap, selectedUserId]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const currentUserId = user.id;
+    let cancelled = false;
+
+    async function loadMyProfileSummary() {
+      try {
+        const result = await apolloClient.query<{ getCoursesAndTopics: UserProfileSummary | null }>({
+          query: GET_COURSES_AND_TOPICS,
+          variables: { userId: currentUserId },
+          fetchPolicy: 'network-only',
+        });
+
+        if (!cancelled) setMyProfileSummary(result.data.getCoursesAndTopics ?? null);
+      } catch {
+        if (!cancelled) setMyProfileSummary(null);
+      }
+    }
+
+    loadMyProfileSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apolloClient, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || matches.length === 0) return;
+
+    const currentUserId = user.id;
     let cancelled = false;
 
     async function loadMatchProfiles() {
       try {
         const mine = await apolloClient.query<{ getMatchProfile: MatchProfileSummary | null }>({
           query: GET_MATCH_PROFILE,
-          variables: {},
+          variables: { userId: currentUserId },
           fetchPolicy: 'network-only',
         });
 
@@ -225,7 +263,41 @@ export default function FindBuddies() {
     return () => {
       cancelled = true;
     };
-  }, [apolloClient, matches]);
+  }, [apolloClient, matches, user?.id]);
+
+  useEffect(() => {
+    if (!selectedUserId || matchProfiles[selectedUserId] !== undefined) return;
+
+    const targetUserId = selectedUserId;
+    let cancelled = false;
+
+    async function loadSelectedMatchProfile() {
+      try {
+        const result = await apolloClient.query<{ getMatchProfile: MatchProfileSummary | null }>({
+          query: GET_MATCH_PROFILE,
+          variables: { userId: targetUserId },
+          fetchPolicy: 'network-only',
+        });
+
+        if (!cancelled) {
+          setMatchProfiles((current) => ({
+            ...current,
+            [targetUserId]: result.data.getMatchProfile ?? null,
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          setMatchProfiles((current) => ({ ...current, [targetUserId]: null }));
+        }
+      }
+    }
+
+    loadSelectedMatchProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apolloClient, matchProfiles, selectedUserId]);
 
   const formatPercent = (value: number) => `${value > 1 ? Math.round(value) : Math.round(value * 100)}% Match`;
 
@@ -262,7 +334,14 @@ export default function FindBuddies() {
 
   const formatPreference = (value?: string | number | null) => {
     if (value === null || value === undefined || value === '') return 'Not set';
-    if (typeof value === 'number') return `${value} ${value === 1 ? 'person' : 'people'}`;
+    if (typeof value === 'number') {
+      return `${value} ${value === 1 ? 'person' : 'people'}`;
+    }
+    // Convert string (from profile-service) to a number + label
+    const numericValue = GROUP_SIZE_STRING_TO_NUMBER[value as string];
+    if (numericValue) {
+      return `${numericValue} ${numericValue === 1 ? 'person' : 'people'}`;
+    }
     return value
       .replace(/[-_]/g, ' ')
       .split(' ')
@@ -270,6 +349,29 @@ export default function FindBuddies() {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(' ');
   };
+
+  const labelForProfileValue = (value?: string | null) => formatPreference(value);
+
+  const generateBio = (profile?: UserProfileSummary | null) => {
+    if (!profile) return 'This student has not completed their study profile yet.';
+
+    const pieces = [
+      `${labelForProfileValue(profile.studyPace)} learner${
+        profile.studyMode ? ` who prefers ${labelForProfileValue(profile.studyMode).toLowerCase()} sessions` : ''
+      }${profile.sessionLength ? ` around ${profile.sessionLength}` : ''}.`,
+      profile.courses?.length
+        ? `Currently studying ${profile.courses.slice(0, 3).map((course) => course.name).join(', ')}`
+        : 'Courses have not been added yet',
+      profile.topics?.length
+        ? `with focus areas like ${profile.topics.slice(0, 4).map((topic) => topic.name).join(', ')}.`
+        : '',
+    ];
+
+    return pieces.filter(Boolean).join(' ');
+  };
+
+  const formatStudyStyles = (profile?: UserProfileSummary | null) =>
+    profile?.studyStyles?.length ? profile.studyStyles.map((style) => formatPreference(style)).join(', ') : 'Not set';
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -293,6 +395,9 @@ export default function FindBuddies() {
     return `${displayHour}:${String(minutes).padStart(2, '0')} ${suffix}`;
   };
 
+  const formatMinutes = (minutes: number) =>
+    formatTime(`${Math.floor(minutes / 60)}:${minutes % 60}`);
+
   const formatSlot = (slot: MatchAvailabilitySlot) =>
     `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`;
 
@@ -308,10 +413,26 @@ export default function FindBuddies() {
     return 'No availability set yet';
   };
 
+  const mergeAvailabilityRows = (rows: Array<{ day: string; start: number; end: number }>) => {
+    const sorted = [...rows].sort((a, b) => a.day.localeCompare(b.day) || a.start - b.start);
+    const merged: Array<{ day: string; start: number; end: number }> = [];
+
+    for (const row of sorted) {
+      const previous = merged[merged.length - 1];
+      if (previous && previous.day === row.day && previous.end >= row.start) {
+        previous.end = Math.max(previous.end, row.end);
+      } else {
+        merged.push({ ...row });
+      }
+    }
+
+    return merged;
+  };
+
   const getAvailabilityRows = (candidateId: string, fallback?: string) => {
     const candidateSlots = matchProfiles[candidateId]?.availabilitySlots ?? [];
     const mySlots = myMatchProfile?.availabilitySlots ?? [];
-    const rows: Array<{ day: string; time: string }> = [];
+    const rows: Array<{ day: string; start: number; end: number }> = [];
 
     for (const candidateSlot of candidateSlots) {
       const sameDayMine = mySlots.filter(
@@ -319,7 +440,11 @@ export default function FindBuddies() {
       );
 
       if (sameDayMine.length === 0) {
-        rows.push({ day: normalizeDay(candidateSlot.dayOfWeek), time: formatSlot(candidateSlot) });
+        rows.push({
+          day: normalizeDay(candidateSlot.dayOfWeek),
+          start: minutesFromTime(candidateSlot.startTime),
+          end: minutesFromTime(candidateSlot.endTime),
+        });
         continue;
       }
 
@@ -330,13 +455,21 @@ export default function FindBuddies() {
         if (start < end) {
           rows.push({
             day: normalizeDay(candidateSlot.dayOfWeek),
-            time: `${formatTime(`${Math.floor(start / 60)}:${start % 60}`)} - ${formatTime(`${Math.floor(end / 60)}:${end % 60}`)}`,
+            start,
+            end,
           });
         }
       }
     }
 
-    if (rows.length > 0) return rows.slice(0, 6);
+    if (rows.length > 0) {
+      return mergeAvailabilityRows(rows)
+        .slice(0, 6)
+        .map((row) => ({
+          day: row.day,
+          time: `${formatMinutes(row.start)} - ${formatMinutes(row.end)}`,
+        }));
+    }
     return [{ day: 'Availability', time: summarizeAvailability(candidateId, fallback) }];
   };
 
@@ -364,35 +497,39 @@ export default function FindBuddies() {
     { key: 'available', label: 'Available Now' },
   ];
 
-  if (selectedMatch) {
-    const person = usersById.get(selectedMatch.candidateUserId);
-    const sharedCourses = courseMap[selectedMatch.candidateUserId] ?? [];
-    const compatibility = getPercentValue(selectedMatch.compatibility);
-    const reasons = selectedMatch.reasons.filter((reason) => !reason.startsWith('Shared courses'));
+  if (selectedCandidateId) {
+    const person = usersById.get(selectedCandidateId);
+    const candidateProfileData = profileMap[selectedCandidateId];
+    const candidateCourses = candidateProfileData?.courses ?? [];
+    const candidateTopics = candidateProfileData?.topics ?? [];
+    const sharedCourses = courseMap[selectedCandidateId] ?? [];
+    const isBuddy = buddyIds.has(selectedCandidateId);
+    const compatibility = selectedCandidateMatch ? getPercentValue(selectedCandidateMatch.compatibility) : 0;
+    const reasons = selectedCandidateMatch?.reasons.filter((reason) => !reason.startsWith('Shared courses')) ?? [];
     const preferenceReasons = reasons.filter((reason) => !reason.toLowerCase().includes('availability'));
     const availabilityReason = reasons.find((reason) => reason.toLowerCase().includes('availability'));
-    const availabilityRows = getAvailabilityRows(selectedMatch.candidateUserId, availabilityReason);
-    const candidateProfile = matchProfiles[selectedMatch.candidateUserId];
+    const availabilityRows = getAvailabilityRows(selectedCandidateId, availabilityReason);
+    const candidateProfile = matchProfiles[selectedCandidateId];
     const preferenceRows = [
       {
         label: 'Study Pace',
-        yours: formatPreference(myMatchProfile?.studyPace),
-        theirs: formatPreference(candidateProfile?.studyPace),
+        yours: formatPreference(myProfileSummary?.studyPace ?? myMatchProfile?.studyPace),
+        theirs: formatPreference(candidateProfileData?.studyPace ?? candidateProfile?.studyPace),
       },
       {
         label: 'Study Mode',
-        yours: formatPreference(myMatchProfile?.studyMode),
-        theirs: formatPreference(candidateProfile?.studyMode),
+        yours: formatPreference(myProfileSummary?.studyMode ?? myMatchProfile?.studyMode),
+        theirs: formatPreference(candidateProfileData?.studyMode ?? candidateProfile?.studyMode),
       },
       {
         label: 'Study Style',
-        yours: formatPreference(myMatchProfile?.studyStyle),
-        theirs: formatPreference(candidateProfile?.studyStyle),
+        yours: formatStudyStyles(myProfileSummary) !== 'Not set' ? formatStudyStyles(myProfileSummary) : formatPreference(myMatchProfile?.studyStyle),
+        theirs: formatStudyStyles(candidateProfileData) !== 'Not set' ? formatStudyStyles(candidateProfileData) : formatPreference(candidateProfile?.studyStyle),
       },
       {
         label: 'Group Size',
-        yours: formatPreference(myMatchProfile?.groupSize),
-        theirs: formatPreference(candidateProfile?.groupSize),
+        yours: formatPreference(myProfileSummary?.groupSize ?? myMatchProfile?.groupSize),
+        theirs: formatPreference(candidateProfileData?.groupSize ?? candidateProfile?.groupSize),
       },
     ];
     const breakdown = [
@@ -404,7 +541,10 @@ export default function FindBuddies() {
 
     return (
       <section className={styles.detailPage}>
-        <button type="button" className={styles.backButton} onClick={() => setSelectedMatchId(null)}>
+        <button type="button" className={styles.backButton} onClick={() => {
+          setSelectedMatchId(null);
+          setSelectedUserId(null);
+        }}>
           Back to matches
         </button>
 
@@ -412,30 +552,36 @@ export default function FindBuddies() {
 
         <div className={styles.detailHero}>
           <div className={styles.detailProfile}>
-            <div className={styles.detailAvatar}>{getInitials(selectedMatch.candidateUserId)}</div>
-            <h1>{getName(selectedMatch.candidateUserId)}</h1>
-            <p>{person?.academicYear || 'Computer Science Junior'}</p>
-            <p>{person?.university || 'German International University'}</p>
-            <p>{person ? `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@studybuddy.edu` : 'student@studybuddy.edu'}</p>
+            <div className={styles.detailAvatar}>{getInitials(selectedCandidateId)}</div>
+            <h1>{getName(selectedCandidateId)}</h1>
+            <p>{person?.academicYear || 'Academic year not set'}</p>
+            <p>{person?.university || 'University not set'}</p>
+            <p>{person?.email || 'Email not set'}</p>
           </div>
 
           <div className={styles.aboutPanel}>
             <p className={styles.detailLabel}>About</p>
             <p className={styles.aboutText}>
-              Passionate about algorithms and data structures. I love collaborative learning
-              and explaining concepts to others. Looking for study partners who are serious
-              about understanding the fundamentals.
+              {generateBio(candidateProfileData)}
             </p>
-            <div className={styles.scoreCard}>
+            {selectedCandidateMatch ? <div className={styles.scoreCard}>
               <div>
                 <strong>Compatibility Score</strong>
                 <span>Excellent match based on courses, availability, and study preferences</span>
               </div>
               <b>{compatibility}%</b>
-            </div>
+            </div> : null}
             <div className={styles.detailActions}>
-              {renderConnectButton(selectedMatch.candidateUserId, styles.detailRequestButton)}
-              <button type="button" className={styles.chatButton} onClick={() => navigate('/messages')}>
+              {renderConnectButton(selectedCandidateId, styles.detailRequestButton)}
+              <button
+                type="button"
+                className={styles.chatButton}
+                disabled={!isBuddy}
+                title={isBuddy ? 'Start chat' : 'You can chat after you become study buddies'}
+                onClick={() => {
+                  if (isBuddy) navigate(`/messages?userId=${encodeURIComponent(selectedCandidateId)}`);
+                }}
+              >
                 Start Chat
               </button>
             </div>
@@ -447,15 +593,27 @@ export default function FindBuddies() {
             <section className={styles.detailSection}>
               <h2>Shared Courses</h2>
               <div className={styles.courseList}>
-                {(sharedCourses.length ? sharedCourses : ['Data Structures', 'Algorithms', 'Database']).slice(0, 3).map((course, index) => (
-                  <div className={styles.courseRow} key={course}>
+                {(sharedCourses.length
+                  ? sharedCourses.map((name) => ({ name, code: 'Shared course', term: null }))
+                  : candidateCourses
+                ).slice(0, 4).map((course, index) => (
+                  <div className={styles.courseRow} key={`${course.name}-${index}`}>
                     <div>
-                      <strong>{course}</strong>
-                      <span>CS {210 + index * 51} - Section {index + 1}</span>
+                      <strong>{course.name}</strong>
+                      <span>{course.code || course.term || (sharedCourses.length ? 'Shared course' : 'Profile course')}</span>
                     </div>
-                    <em>Match</em>
+                    <em>{sharedCourses.some((name) => name === course.name) ? 'Match' : 'Profile'}</em>
                   </div>
                 ))}
+                {sharedCourses.length === 0 && candidateCourses.length === 0 ? (
+                  <div className={styles.courseRow}>
+                    <div>
+                      <strong>No courses added yet</strong>
+                      <span>This student has not added courses to their profile.</span>
+                    </div>
+                    <em>Profile</em>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -502,7 +660,11 @@ export default function FindBuddies() {
             </div>
             <h3>Key Highlights</h3>
             <ul>
-              {(sharedCourses.length ? sharedCourses : ['3 shared courses', 'Similar learning style', 'Common study environment', 'Overlapping schedule']).slice(0, 4).map((item) => (
+              {[
+                ...sharedCourses,
+                ...candidateTopics.map((topic) => topic.name),
+                ...(reasons.length ? reasons : ['Profile data loaded from study preferences']),
+              ].slice(0, 4).map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>

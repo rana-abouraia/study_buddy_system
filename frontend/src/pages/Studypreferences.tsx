@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, gql } from '@apollo/client';
 import hiveLogo from '../assets/images/logo.png';
+import type {
+  PreferenceLength as Length,
+  PreferenceMode as Mode,
+  PreferencePace as Pace,
+  PreferenceSize as Size,
+  PreferenceStyle as Style,
+  PreferenceTime as Time,
+} from '../types';
 
 /* ── GraphQL ─────────────────────────────────────────────── */
 const UPDATE_PREFERENCES = gql`
@@ -19,12 +27,6 @@ const UPDATE_PREFERENCES = gql`
 `;
 
 /* ── Option types ────────────────────────────────────────── */
-type Pace   = 'SLOW' | 'MODERATE' | 'FAST';
-type Mode   = 'ONLINE' | 'IN_PERSON' | 'BOTH';
-type Size   = 'ONE_ON_ONE' | 'SMALL' | 'LARGE';
-type Style  = 'WRITING' | 'DISCUSSION' | 'LISTENING' | 'QUIET';
-type Time   = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT';
-type Length = '30 minutes' | '1 hour' | '2 hours' | '3+ hours';
 
 /* ═══════════════════════════════════════════════════════════ */
 export default function StudyPreferences() {

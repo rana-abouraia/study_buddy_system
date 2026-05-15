@@ -44,6 +44,18 @@ export const typeDefs = `#graphql
 
     joinSession(sessionId: ID!): SessionParticipant!
 
+    updateSession(
+      sessionId: ID!
+      topic: String
+      description: String
+      date: String
+      duration: Int
+      sessionType: String
+      meetingLink: String
+      location: String
+      participantIds: [ID!]
+    ): StudySession!
+
     leaveSession(sessionId: ID!): Boolean!
 
     cancelSession(sessionId: ID!): Boolean!

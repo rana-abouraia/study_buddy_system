@@ -17,11 +17,12 @@ import FindBuddies      from './pages/FindBuddies';
 import Connections      from './pages/Connections';
 import StudySessions    from './pages/StudySessions';
 import Messages         from './pages/Messages';
-import PlaceholderPage  from './pages/PlaceholderPage';
 
 // Onboarding pages (appear once after account creation)
 import CompleteProfile  from './pages/Completeprofile';
 import StudyPreferences from './pages/Studypreferences';
+import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 
 // ─── Protected Route ─────────────────────────────────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -66,9 +67,9 @@ function AppRoutes() {
         <Route path="/my-connections"  element={<Connections />} />
         <Route path="/study-sessions"  element={<StudySessions />} />
         <Route path="/availability"    element={<Availability />} />
-        <Route path="/notifications"   element={<PlaceholderPage title="Notifications" description="See important alerts and session updates." />} />
+        <Route path="/notifications"   element={<Notifications />} />
         <Route path="/messages"        element={<Messages />} />
-        <Route path="/profile"         element={<PlaceholderPage title="Profile" description="Edit your profile and preferences." />} />
+        <Route path="/profile"         element={<Profile />} />
       </Route>
 
       {/* Catch-all */}

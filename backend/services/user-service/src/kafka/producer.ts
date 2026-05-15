@@ -1,10 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Kafka } from 'kafkajs';
-<<<<<<< HEAD
-=======
 import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
->>>>>>> main
 
 type KafkaEventEnvelope<TPayload> = {
   eventName: string;
@@ -25,37 +22,6 @@ const kafka = new Kafka({
 });
 
 const producer = kafka.producer();
-<<<<<<< HEAD
-let producerConnected = false;
-
-const connectProducer = async () => {
-  if (!producerConnected) {
-    await producer.connect();
-    producerConnected = true;
-  }
-};
-
-export const publishEvent = async <TPayload>(
-  topic: string,
-  payload: TPayload,
-  correlationId = randomUUID(),
-) => {
-  const event: KafkaEventEnvelope<TPayload> = {
-    eventName: topic,
-    timestamp: new Date().toISOString(),
-    producerService: 'user-service',
-    correlationId,
-    payload,
-  };
-
-  try {
-    await connectProducer();
-    await producer.send({
-      topic,
-      messages: [{ value: JSON.stringify(event) }],
-    });
-    console.log(`[user-service] published ${topic}`);
-=======
 let connected = false;
 
 const ensureConnected = async () => {
@@ -83,7 +49,6 @@ export const publishEvent = async (topic: string, payload: object) => {
       ]
     });
     console.log(`📨 Event published to topic: ${topic}`);
->>>>>>> main
   } catch (error) {
     console.error(`[user-service] failed to publish ${topic}:`, error);
     throw error;

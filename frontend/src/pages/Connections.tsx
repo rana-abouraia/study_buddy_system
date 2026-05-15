@@ -1,53 +1,13 @@
-﻿import { useApolloClient, useMutation, useQuery } from '@apollo/client';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client';
+import { Eye } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GET_CONNECTIONS_DATA, GET_COURSES_AND_TOPICS } from '../graphql/queries';
 import { ACCEPT_BUDDY_REQUEST, REJECT_BUDDY_REQUEST } from '../graphql/mutations';
-import styles from './Connections.module.css';
+import type { BuddyRequest, ConnectionsData, ConnectionsTabKey, CourseItem } from '../types';
+import styles from '../styles/pages/Connections.module.css';
 
-type TabKey = 'incoming' | 'outgoing' | 'buddies';
-
-interface BuddyRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CourseItem {
-  id: string;
-  name: string;
-}
-
-interface UserSummary {
-  id: string;
-  firstName: string;
-  lastName: string;
-  university?: string;
-  academicYear?: string;
-}
-
-interface MatchResult {
-  id: string;
-  candidateUserId: string;
-  compatibility: number;
-  reasons: string[];
-}
-
-interface ConnectionsData {
-  getRecommendedMatches: MatchResult[];
-  getIncomingBuddyRequests: BuddyRequest[];
-  getOutgoingBuddyRequests: BuddyRequest[];
-  getMyBuddies: string[];
-  meProfile?: {
-    courses: CourseItem[];
-  };
-  getAllUsers: UserSummary[];
-}
-
-const tabs: Array<{ key: TabKey; label: string; accent: string }> = [
+const tabs: Array<{ key: ConnectionsTabKey; label: string; accent: string }> = [
   { key: 'incoming', label: 'Incoming Requests', accent: 'pink' },
   { key: 'outgoing', label: 'Outgoing Requests', accent: 'slate' },
   { key: 'buddies', label: 'Study Buddies', accent: 'green' },
@@ -57,7 +17,7 @@ export default function Connections() {
   const navigate = useNavigate();
   const apolloClient = useApolloClient();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('incoming');
+  const [activeTab, setActiveTab] = useState<ConnectionsTabKey>('incoming');
   const [courseMap, setCourseMap] = useState<Record<string, string[]>>({});
   const [actionError, setActionError] = useState('');
 
@@ -214,9 +174,8 @@ export default function Connections() {
     const person = getUser(userId);
 
     if (person) {
-      return `${person.firstName?.[0] ?? ''}${
-        person.lastName?.[0] ?? ''
-      }`.toUpperCase();
+      return `${person.firstName?.[0] ?? ''}${person.lastName?.[0] ?? ''
+        }`.toUpperCase();
     }
 
     return userId.slice(0, 2).toUpperCase() || 'SB';
@@ -262,7 +221,7 @@ export default function Connections() {
   const outgoing = data?.getOutgoingBuddyRequests ?? [];
   const buddies = data?.getMyBuddies ?? [];
 
-  const counts: Record<TabKey, number> = {
+  const counts: Record<ConnectionsTabKey, number> = {
     incoming: incoming.length,
     outgoing: outgoing.length,
     buddies: buddies.length,
@@ -270,7 +229,7 @@ export default function Connections() {
 
   const renderPersonCard = (
     userId: string,
-    options: { request?: BuddyRequest; mode: TabKey }
+    options: { request?: BuddyRequest; mode: ConnectionsTabKey }
   ) => {
     const person = getUser(userId);
     const match = matchesByCandidate.get(userId);
@@ -283,9 +242,8 @@ export default function Connections() {
       >
         <div className={styles.cardTop}>
           <div
-            className={`${styles.avatar} ${
-              styles[`avatar${Math.abs(userId.length % 4)}`]
-            }`}
+            className={`${styles.avatar} ${styles[`avatar${Math.abs(userId.length % 4)}`]
+              }`}
           >
             {getInitials(userId)}
           </div>
@@ -336,7 +294,7 @@ export default function Connections() {
                 onClick={() => handleAccept(options.request!.id)}
                 disabled={accepting || rejecting}
               >
-                ✓ Accept
+                Accept
               </button>
 
               <button
@@ -345,17 +303,19 @@ export default function Connections() {
                 onClick={() => handleReject(options.request!.id)}
                 disabled={accepting || rejecting}
               >
-                ✕ Reject
+                Reject
               </button>
 
               <button
                 type="button"
                 className={styles.eyeButton}
+                aria-label="View profile"
+                title="View profile"
                 onClick={() => navigate('/find-buddies', {
-  state: { selectedMatchId: userId }
-})}
+                  state: { selectedUserId: userId }
+                })}
               >
-                👁
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -367,11 +327,13 @@ export default function Connections() {
               <button
                 type="button"
                 className={styles.eyeButton}
-                onClick={() =>navigate('/find-buddies', {
-  state: { selectedMatchId: userId }
-})}
+                aria-label="View profile"
+                title="View profile"
+                onClick={() => navigate('/find-buddies', {
+                  state: { selectedUserId: userId }
+                })}
               >
-                👁
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -401,11 +363,13 @@ export default function Connections() {
               <button
                 type="button"
                 className={styles.eyeButton}
+                aria-label="View profile"
+                title="View profile"
                 onClick={() => navigate('/find-buddies', {
-  state: { selectedMatchId: userId }
-})}
+                  state: { selectedUserId: userId }
+                })}
               >
-                👁
+                <Eye size={20} aria-hidden="true" />
               </button>
             </div>
           ) : null}
@@ -481,9 +445,8 @@ export default function Connections() {
           <button
             key={tab.key}
             type="button"
-            className={`${styles.tab} ${
-              activeTab === tab.key ? styles.activeTab : ''
-            }`}
+            className={`${styles.tab} ${activeTab === tab.key ? styles.activeTab : ''
+              }`}
             onClick={() => setActiveTab(tab.key)}
           >
             <span className={styles[`${tab.accent}Dot`]} />

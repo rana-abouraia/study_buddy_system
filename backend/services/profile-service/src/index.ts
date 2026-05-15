@@ -26,6 +26,7 @@ async function main() {
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,
+    introspection: true,
   });
 
   const { url } = await startStandaloneServer(server, {

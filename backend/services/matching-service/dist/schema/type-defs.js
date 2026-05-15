@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.typeDefs = void 0;
 exports.typeDefs = `#graphql
-  type AvailabilitySlot {
+  type MatchAvailabilitySlot {
     id: ID!
     dayOfWeek: String!
     startTime: String!
@@ -18,7 +18,7 @@ exports.typeDefs = `#graphql
     studyMode: String
     groupSize: Int
     studyStyle: String
-    availabilitySlots: [AvailabilitySlot!]!
+    availabilitySlots: [MatchAvailabilitySlot!]!
     createdAt: String!
     updatedAt: String!
   }
@@ -33,12 +33,37 @@ exports.typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type BuddyRequest {
+    id: ID!
+    senderId: String!
+    receiverId: String!
+    status: String!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  input UpdateMatchProfileInput {
+    studyPace: String
+    studyMode: String
+    groupSize: Int
+    studyStyle: String
+    preferredTimes: [String!]
+    sessionLength: String
+  }
+
   type Query {
-    getRecommendedMatches(userId: String!, limit: Int): [MatchResult!]!
-    getMatchProfile(userId: String!): MatchProfile
+    getRecommendedMatches(userId: String, limit: Int): [MatchResult!]!
+    getMatchProfile(userId: String): MatchProfile
+    getIncomingBuddyRequests: [BuddyRequest!]!
+    getOutgoingBuddyRequests: [BuddyRequest!]!
+    getMyBuddies: [String!]!
   }
 
   type Mutation {
-    recalculateMatches(userId: String!): [MatchResult!]!
+    recalculateMatches(userId: String): [MatchResult!]!
+    sendBuddyRequest(receiverId: String!): BuddyRequest!
+    acceptBuddyRequest(requestId: String!): BuddyRequest!
+    rejectBuddyRequest(requestId: String!): BuddyRequest!
+    updateMatchProfile(input: UpdateMatchProfileInput!): MatchProfile!
   }
 `;

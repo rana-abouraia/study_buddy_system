@@ -255,6 +255,28 @@ export class MatchingService {
       include: { availabilitySlots: true }
     });
   }
+  
+  async updateProfile(userId: string, data: {
+  studyPace?: string;
+  studyMode?: string;
+  groupSize?: number;
+  studyStyle?: string;
+  preferredTimes?: string[];
+  sessionLength?: string;
+}) {
+  return prisma.matchProfile.update({
+    where: { userId },
+    data: {
+      studyPace: data.studyPace,
+      studyMode: data.studyMode,
+      groupSize: data.groupSize,
+      studyStyle: data.studyStyle,
+      // preferredTimes and sessionLength are not in your MatchProfile model?
+      // If they are missing, you need to add them to the Prisma schema.
+      // For now, just ignore them or store somewhere else.
+    },
+  });
+}
 }
 
 export const matchingService = new MatchingService();

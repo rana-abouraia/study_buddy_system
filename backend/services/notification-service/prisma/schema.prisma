@@ -23,4 +23,6 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([sourceTopic])
+  @@unique([userId, correlationId]) // ← add this
+
 }

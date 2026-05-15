@@ -116,6 +116,33 @@ export const resolvers = {
       });
     },
 
+    getProfileSuggestions: async (_: unknown, { search }: { search?: string }) => {
+      const query = search?.trim();
+      const courseWhere = query
+        ? { name: { contains: query, mode: 'insensitive' as const } }
+        : undefined;
+      const topicWhere = query
+        ? { name: { contains: query, mode: 'insensitive' as const } }
+        : undefined;
+
+      const [courses, topics] = await Promise.all([
+        prisma.course.findMany({
+          where: courseWhere,
+          distinct: ['code'],
+          orderBy: [{ name: 'asc' }, { code: 'asc' }],
+          take: 20,
+        }),
+        prisma.topic.findMany({
+          where: topicWhere,
+          distinct: ['name'],
+          orderBy: { name: 'asc' },
+          take: 20,
+        }),
+      ]);
+
+      return { courses, topics };
+    },
+
     meProfile: async (_: unknown, __: unknown, context: Context) => {
       const userId = requireUserId(context);
       return prisma.userProfile.findUnique({

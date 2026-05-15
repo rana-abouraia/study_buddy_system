@@ -26,6 +26,11 @@ export const typeDefs = `#graphql
     updatedAt: String!
   }
 
+  type ProfileSuggestions {
+    courses: [Course!]!
+    topics: [Topic!]!
+  }
+  
   input UpdatePreferencesInput {
     studyPace: String!
     studyMode: String!
@@ -50,6 +55,7 @@ export const typeDefs = `#graphql
     getPreferences(userId: ID!): UserProfile
     getCoursesAndTopics(userId: ID!): UserProfile
     meProfile: UserProfile
+    getProfileSuggestions: ProfileSuggestions
   }
 
   type Mutation {

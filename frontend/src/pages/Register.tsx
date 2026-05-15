@@ -3,29 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
 import { REGISTER_MUTATION } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-import { AuthPayload } from '../types';
-import styles from './Register.module.css';
+import type { AuthPayload, RegisterFormErrors, RegisterFormState } from '../types';
+import styles from '../styles/pages/Register.module.css';
 
 import hiveLogo from '../assets/images/logo.png';
-
-interface FormState {
-  fullName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  university: string;
-  academicYear: string;
-}
-
-interface FormErrors {
-  fullName?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  university?: string;
-  academicYear?: string;
-  general?: string;
-}
 
 const getPasswordStrength = (password: string): { level: number; label: string; color: string } => {
   let strength = 0;
@@ -47,7 +28,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<RegisterFormState>({
     fullName: '',
     email: '',
     password: '',
@@ -55,7 +36,7 @@ export default function Register() {
     university: '',
     academicYear: '',
   });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<RegisterFormErrors>({});
 
   const [registerMutation, { loading }] = useMutation<{ register: AuthPayload }>(
     REGISTER_MUTATION,
@@ -73,7 +54,7 @@ export default function Register() {
   const passwordStrength = getPasswordStrength(form.password);
 
   const validate = (): boolean => {
-    const newErrors: FormErrors = {};
+    const newErrors: RegisterFormErrors = {};
 
     if (!form.fullName) newErrors.fullName = 'Full name is required.';
     if (!form.email) newErrors.email = 'Email is required.';
@@ -117,7 +98,7 @@ export default function Register() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof FormErrors]) {
+    if (errors[name as keyof RegisterFormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };

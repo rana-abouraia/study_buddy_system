@@ -22,6 +22,7 @@ export const typeDefs = `#graphql
     myNotifications(onlyUnread: Boolean = false, limit: Int = 50): [Notification!]!
     notification(id: ID!): Notification
     notificationsByUser(userId: ID!, onlyUnread: Boolean = false, limit: Int = 50): [Notification!]!
+    unreadNotificationsCount: Int!
   }
 
   type Mutation {

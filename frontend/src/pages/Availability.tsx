@@ -3,20 +3,32 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   GET_MY_AVAILABILITY,
+} from '../graphql/queries';
+import {
   ADD_AVAILABILITY_SLOT,
   DELETE_AVAILABILITY_SLOT,
-} from '../graphql/queries';
-import styles from './Availability.module.css';
+} from '../graphql/mutations';
+import styles from '../styles/pages/Availability.module.css';
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const ROW_HOURS = Array.from({ length: 16 }, (_, i) => 7 + i);
+const ROW_HOURS = Array.from({ length: 16 }, (_, i) => 8 + i);
 
 const slotKey = (day: number, hour: number) => `${day}-${hour}`;
+const formatCompactHour = (hour: number) => {
+  const normalizedHour = ((hour % 24) + 24) % 24;
+  const displayHour = normalizedHour % 12 === 0 ? 12 : normalizedHour % 12;
+  return {
+    hour: displayHour,
+    period: normalizedHour >= 12 ? 'PM' : 'AM',
+  };
+};
+
 const formatHourLabel = (hour: number) => {
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const normalized = hour % 12 === 0 ? 12 : hour % 12;
-  return `${normalized}:00 ${period}`;
+  const start = formatCompactHour(hour);
+  const end = formatCompactHour(hour + 1);
+  const period = start.period === end.period ? start.period : `${start.period}-${end.period}`;
+  return `${start.hour}-${end.hour} ${period}`;
 };
 
 
@@ -145,7 +157,7 @@ export default function Availability() {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          
+
           <h1>Manage Availability</h1>
           <p className={styles.pageDescription}>
             Select the time slots when you're available for study sessions.

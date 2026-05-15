@@ -7,10 +7,13 @@ import type {
   UserPreferencesUpdatedPayload
 } from '../types/events.js';
 
-const brokers = (process.env.KAFKA_BROKERS || process.env.KAFKA_BROKER || "kafka:9092")
-  .split(",")
-  .map((b) => b.trim());
+const brokers = process.env.KAFKA_BROKERS
+  ? process.env.KAFKA_BROKERS.split(",").map((b) => b.trim())
+  : process.env.KAFKA_BROKER
+    ? process.env.KAFKA_BROKER.split(",").map((b) => b.trim())
+    : [];
 
+    
 const kafka = new Kafka({
   clientId: process.env.KAFKA_CLIENT_ID || 'matching-service',
   brokers
@@ -23,6 +26,15 @@ const consumer = kafka.consumer({
 function parseGroupSize(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
+    const normalized = value.trim().toUpperCase();
+    const groupSizeMap: Record<string, number> = {
+      ONE_ON_ONE: 2,
+      SMALL: 4,
+      LARGE: 8
+    };
+
+    if (normalized in groupSizeMap) return groupSizeMap[normalized];
+
     const match = value.match(/\d+/);
     if (match) {
       const n = parseInt(match[0], 10);
@@ -30,6 +42,16 @@ function parseGroupSize(value: unknown): number | null {
     }
   }
   return null;
+}
+
+function parseStudyStyle(value: unknown): string | null {
+  if (!Array.isArray(value)) return null;
+
+  const styles = value
+    .map((style) => (typeof style === "string" ? style.trim() : ""))
+    .filter((style) => style.length > 0);
+
+  return styles.length > 0 ? styles.join(",") : null;
 }
 
 function mapDayOfWeek(day: number | string): string {
@@ -48,8 +70,12 @@ function mapDayOfWeek(day: number | string): string {
 }
 
 export async function startConsumer() {
-  await consumer.connect();
+  if (brokers.length === 0) {
+    console.log("[matching-service] Kafka consumer disabled");
+    return;
+  }
 
+  await consumer.connect();
   await consumer.subscribe({
     topic: TOPICS.USER_PREFERENCES_UPDATED,
     fromBeginning: false
@@ -81,8 +107,9 @@ export async function startConsumer() {
             studyPace: payload.studyPace ?? null,
             studyMode: payload.studyMode ?? null,
             groupSize: parseGroupSize(payload.groupSize),
-            studyStyle: payload.studyStyles?.[0] ?? null
+            studyStyle: parseStudyStyle(payload.studyStyles)
           });
+          await matchingService.recalculateMatchesForUser(payload.userId);
 
           console.log(
             `[matching-service] handled ${topic} for user ${payload.userId}`

@@ -4,29 +4,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
 import { LOGIN_MUTATION } from '../graphql/mutations';
 import { useAuth } from '../context/AuthContext';
-import { AuthPayload } from '../types';
-import styles from './Login.module.css';
+import type { AuthPayload, LoginFormErrors, LoginFormState } from '../types';
+import styles from '../styles/pages/Login.module.css';
 
 import brainImage from '../assets/images/login.png';
 import hiveLogo from '../assets/images/logo.png';
-
-interface FormState {
-  email: string;
-  password: string;
-}
-
-interface FormErrors {
-  email?: string;
-  password?: string;
-  general?: string;
-}
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [form, setForm] = useState<FormState>({ email: '', password: '' });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [form, setForm] = useState<LoginFormState>({ email: '', password: '' });
+  const [errors, setErrors] = useState<LoginFormErrors>({});
 
   const [loginMutation, { loading }] = useMutation<{ login: AuthPayload }>(
     LOGIN_MUTATION,
@@ -42,7 +31,7 @@ export default function Login() {
   );
 
   const validate = (): boolean => {
-    const newErrors: FormErrors = {};
+    const newErrors: LoginFormErrors = {};
     if (!form.email) newErrors.email = 'Email is required.';
     else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Enter a valid email.';
     if (!form.password) newErrors.password = 'Password is required.';
@@ -59,8 +48,9 @@ export default function Login() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const fieldName = name as keyof LoginFormState;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof FormErrors]) {
+    if (errors[fieldName]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
